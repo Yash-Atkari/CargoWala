@@ -1,7 +1,25 @@
 import React from 'react';
 
 type BadgeVariant =
-  | 'AVAILABLE' | 'LOADING' | 'IN_TRANSIT' | 'MAINTENANCE' |'PENDING'| 'LOADED' | 'DELIVERED' | 'DAMAGED' | 'DELAYED' |'LOW'| 'MEDIUM' | 'HIGH' | 'URGENT' | 'NORMAL' | 'FRAGILE' |'ADMIN' | 'LOADER' | 'ACTIVE' | 'INACTIVE';
+  | 'AVAILABLE'
+  | 'LOADING'
+  | 'IN_TRANSIT'
+  | 'MAINTENANCE'
+  | 'PENDING'
+  | 'LOADED'
+  | 'DELIVERED'
+  | 'DAMAGED'
+  | 'DELAYED'
+  | 'LOW'
+  | 'MEDIUM'
+  | 'HIGH'
+  | 'URGENT'
+  | 'NORMAL'
+  | 'FRAGILE'
+  | 'ADMIN'
+  | 'LOADER'
+  | 'ACTIVE'
+  | 'INACTIVE';
 
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   AVAILABLE: 'truck-available',

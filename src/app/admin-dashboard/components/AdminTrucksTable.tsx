@@ -6,11 +6,15 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import UtilizationBar from '@/components/ui/UtilizationBar';
 import EmptyState from '@/components/ui/EmptyState';
 
-export default function AdminTrucksTable() {
+interface AdminTrucksTableProps {
+  trucks?: MockTruck[];
+}
+
+export default function AdminTrucksTable({ trucks = MOCK_TRUCKS }: AdminTrucksTableProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  const filtered = MOCK_TRUCKS?.filter((t) => {
+  const filtered = trucks?.filter((t) => {
     const matchSearch =
       t?.registrationNumber?.toLowerCase()?.includes(search?.toLowerCase()) ||
       t?.model?.toLowerCase()?.includes(search?.toLowerCase());
@@ -24,11 +28,16 @@ export default function AdminTrucksTable() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-border">
         <div>
           <h3 className="text-sm font-600 text-foreground">Fleet Trucks</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">{MOCK_TRUCKS?.length} trucks registered</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {trucks?.length} trucks registered
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search
+              size={13}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
             <input
               type="text"
               placeholder="Search trucks..."
@@ -57,14 +66,33 @@ export default function AdminTrucksTable() {
             icon={Truck}
             title="No trucks found"
             description="No trucks match your current search or filter criteria."
-            action={{ label: 'Clear Filters', onClick: () => { setSearch(''); setStatusFilter('ALL'); } }}
+            action={{
+              label: 'Clear Filters',
+              onClick: () => {
+                setSearch('');
+                setStatusFilter('ALL');
+              },
+            }}
           />
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {['Registration', 'Model', 'Dimensions (cm)', 'Max Weight', 'Space Util.', 'Weight Util.', 'Assigned Loader', 'Status', '']?.map((col) => (
-                  <th key={`th-truck-${col}`} className="px-4 py-2.5 text-left text-[10px] font-600 text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                {[
+                  'Registration',
+                  'Model',
+                  'Dimensions (cm)',
+                  'Max Weight',
+                  'Space Util.',
+                  'Weight Util.',
+                  'Assigned Loader',
+                  'Status',
+                  '',
+                ]?.map((col) => (
+                  <th
+                    key={`th-truck-${col}`}
+                    className="px-4 py-2.5 text-left text-[10px] font-600 text-muted-foreground uppercase tracking-wider whitespace-nowrap"
+                  >
                     {col}
                   </th>
                 ))}
@@ -72,9 +100,14 @@ export default function AdminTrucksTable() {
             </thead>
             <tbody>
               {filtered?.map((truck) => (
-                <tr key={`truck-row-${truck?.id}`} className="border-b border-border hover:bg-muted/30 transition-colors group">
+                <tr
+                  key={`truck-row-${truck?.id}`}
+                  className="border-b border-border hover:bg-muted/30 transition-colors group"
+                >
                   <td className="px-4 py-3">
-                    <span className="text-xs font-mono font-600 text-primary">{truck?.registrationNumber}</span>
+                    <span className="text-xs font-mono font-600 text-primary">
+                      {truck?.registrationNumber}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-xs text-foreground">{truck?.model}</span>
@@ -85,7 +118,9 @@ export default function AdminTrucksTable() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs font-tabular text-foreground">{(truck?.maxWeight / 1000)?.toFixed(1)}t</span>
+                    <span className="text-xs font-tabular text-foreground">
+                      {(truck?.maxWeight / 1000)?.toFixed(1)}t
+                    </span>
                   </td>
                   <td className="px-4 py-3 min-w-[100px]">
                     <UtilizationBar value={truck?.currentUtilization} size="sm" showPercent />
@@ -134,7 +169,7 @@ export default function AdminTrucksTable() {
       {/* Footer */}
       <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-muted/10">
         <span className="text-xs text-muted-foreground">
-          Showing {filtered?.length} of {MOCK_TRUCKS?.length} trucks
+          Showing {filtered?.length} of {trucks?.length} trucks
         </span>
         <div className="flex items-center gap-1">
           {[1]?.map((page) => (

@@ -2,7 +2,6 @@ import React from 'react';
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
-
 interface MetricCardProps {
   label: string;
   value: string | number;
@@ -17,8 +16,16 @@ interface MetricCardProps {
 }
 
 export default function MetricCard({
-  label, value, unit, subtext, trend, trendValue, icon: Icon,
-  iconColor = 'text-primary', variant = 'default', className = '',
+  label,
+  value,
+  unit,
+  subtext,
+  trend,
+  trendValue,
+  icon: Icon,
+  iconColor = 'text-primary',
+  variant = 'default',
+  className = '',
 }: MetricCardProps) {
   const variantClasses = {
     default: 'card-elevated',
@@ -29,7 +36,8 @@ export default function MetricCard({
   };
 
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-  const trendColor = trend === 'up' ? 'text-positive' : trend === 'down' ? 'text-negative' : 'text-muted-foreground';
+  const trendColor =
+    trend === 'up' ? 'text-positive' : trend === 'down' ? 'text-negative' : 'text-muted-foreground';
 
   return (
     <div className={`${variantClasses[variant]} p-4 flex flex-col gap-3 ${className}`}>
@@ -46,12 +54,17 @@ export default function MetricCard({
       </div>
       <div>
         <div className="flex items-baseline gap-1">
-          <span className={`font-tabular font-bold text-foreground ${variant === 'hero' ? 'text-3xl' : 'text-2xl'}`}>
+          <span
+            className={`font-tabular font-bold text-foreground ${variant === 'hero' ? 'text-3xl' : 'text-2xl'}`}
+          >
             {value}
           </span>
           {unit && <span className="text-sm text-muted-foreground font-medium">{unit}</span>}
         </div>
-        <p className="text-xs font-500 text-muted-foreground mt-0.5 tracking-wide uppercase" style={{ letterSpacing: '0.04em' }}>
+        <p
+          className="text-xs font-500 text-muted-foreground mt-0.5 tracking-wide uppercase"
+          style={{ letterSpacing: '0.04em' }}
+        >
           {label}
         </p>
         {subtext && <p className="text-xs text-muted-foreground mt-1">{subtext}</p>}

@@ -5,11 +5,15 @@ import { MOCK_PACKAGES } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 
-export default function AdminPackagesTable() {
+interface AdminPackagesTableProps {
+  packages?: typeof MOCK_PACKAGES;
+}
+
+export default function AdminPackagesTable({ packages = MOCK_PACKAGES }: AdminPackagesTableProps) {
   const [search, setSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState<string>('ALL');
 
-  const filtered = MOCK_PACKAGES.filter((p) => {
+  const filtered = packages.filter((p) => {
     const matchSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.digitalId.toLowerCase().includes(search.toLowerCase());
@@ -22,11 +26,14 @@ export default function AdminPackagesTable() {
       <div className="flex items-center justify-between gap-3 p-4 border-b border-border">
         <div>
           <h3 className="text-sm font-600 text-foreground">Packages</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">{MOCK_PACKAGES.length} total</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{packages.length} total</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search
+              size={13}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
             <input
               type="text"
               placeholder="Search packages..."
@@ -54,14 +61,31 @@ export default function AdminPackagesTable() {
             icon={Package}
             title="No packages found"
             description="No packages match your current filters."
-            action={{ label: 'Clear Filters', onClick: () => { setSearch(''); setRiskFilter('ALL'); } }}
+            action={{
+              label: 'Clear Filters',
+              onClick: () => {
+                setSearch('');
+                setRiskFilter('ALL');
+              },
+            }}
           />
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {['Digital ID', 'Name', 'Weight', 'Fragility', 'Priority', 'Risk Score', 'Status'].map((col) => (
-                  <th key={`th-pkg-${col}`} className="px-4 py-2.5 text-left text-[10px] font-600 text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                {[
+                  'Digital ID',
+                  'Name',
+                  'Weight',
+                  'Fragility',
+                  'Priority',
+                  'Risk Score',
+                  'Status',
+                ].map((col) => (
+                  <th
+                    key={`th-pkg-${col}`}
+                    className="px-4 py-2.5 text-left text-[10px] font-600 text-muted-foreground uppercase tracking-wider whitespace-nowrap"
+                  >
                     {col}
                   </th>
                 ))}
@@ -69,26 +93,45 @@ export default function AdminPackagesTable() {
             </thead>
             <tbody>
               {filtered.slice(0, 10).map((pkg) => (
-                <tr key={`pkg-row-${pkg.id}`} className="border-b border-border hover:bg-muted/30 transition-colors group">
+                <tr
+                  key={`pkg-row-${pkg.id}`}
+                  className="border-b border-border hover:bg-muted/30 transition-colors group"
+                >
                   <td className="px-4 py-3">
-                    <span className="text-[10px] font-mono text-muted-foreground">{pkg.digitalId}</span>
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                      {pkg.digitalId}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs text-foreground max-w-[140px] truncate block">{pkg.name}</span>
+                    <span className="text-xs text-foreground max-w-[140px] truncate block">
+                      {pkg.name}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-xs font-tabular text-foreground">{pkg.weight}kg</span>
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge variant={pkg.fragilityLevel === 'FRAGILE' ? 'FRAGILE' : pkg.fragilityLevel as 'LOW' | 'MEDIUM' | 'HIGH'} label={pkg.fragilityLevel} />
+                    <StatusBadge
+                      variant={
+                        pkg.fragilityLevel === 'FRAGILE'
+                          ? 'FRAGILE'
+                          : (pkg.fragilityLevel as 'LOW' | 'MEDIUM' | 'HIGH')
+                      }
+                      label={pkg.fragilityLevel}
+                    />
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge variant={pkg.priority as 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'} label={pkg.priority} />
+                    <StatusBadge
+                      variant={pkg.priority as 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'}
+                      label={pkg.priority}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       {pkg.riskScore >= 70 && <AlertTriangle size={11} className="text-negative" />}
-                      <span className={`text-xs font-tabular font-600 ${pkg.riskScore >= 70 ? 'text-negative' : pkg.riskScore >= 40 ? 'text-warning' : 'text-positive'}`}>
+                      <span
+                        className={`text-xs font-tabular font-600 ${pkg.riskScore >= 70 ? 'text-negative' : pkg.riskScore >= 40 ? 'text-warning' : 'text-positive'}`}
+                      >
                         {pkg.riskScore}/100
                       </span>
                     </div>

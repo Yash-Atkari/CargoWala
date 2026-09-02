@@ -9,7 +9,9 @@ import { MockTruck } from '@/lib/mockData';
 // ─── SCALE FACTOR: cm → scene units (1 unit = 50cm) ─────────────────────────
 const SCALE = 1 / 50;
 
-function scaleVal(cm: number) { return cm * SCALE; }
+function scaleVal(cm: number) {
+  return cm * SCALE;
+}
 
 // ─── PACKAGE COLORS ──────────────────────────────────────────────────────────
 function getPackageColor(pkg: PlacedPackage, isSelected: boolean, isHighlighted: boolean): string {
@@ -125,9 +127,10 @@ function PackageBox({ placed, onClick, showLabels }: PackageBoxProps) {
 
   const { package: pkg, position, isSelected, isHighlighted } = placed;
   const rotY = position.rotationY === 90 ? Math.PI / 2 : 0;
-  const dims = position.rotationY === 90
-    ? { l: pkg.width, w: pkg.length, h: pkg.height }
-    : { l: pkg.length, w: pkg.width, h: pkg.height };
+  const dims =
+    position.rotationY === 90
+      ? { l: pkg.width, w: pkg.length, h: pkg.height }
+      : { l: pkg.length, w: pkg.width, h: pkg.height };
 
   const L = scaleVal(dims.l);
   const W = scaleVal(dims.w);
@@ -149,7 +152,10 @@ function PackageBox({ placed, onClick, showLabels }: PackageBoxProps) {
       <mesh
         ref={meshRef}
         rotation={[0, rotY, 0]}
-        onClick={(e: MouseEvent) => { e.stopPropagation(); onClick(pkg.id); }}
+        onClick={(e: MouseEvent) => {
+          e.stopPropagation();
+          onClick(pkg.id);
+        }}
         onPointerEnter={() => setHovered(true)}
         onPointerLeave={() => setHovered(false)}
         castShadow
@@ -195,9 +201,10 @@ interface GhostPackageProps {
 }
 
 function GhostPackage({ position, pkg, isValid }: GhostPackageProps) {
-  const dims = position.rotationY === 90
-    ? { l: pkg.width, w: pkg.length, h: pkg.height }
-    : { l: pkg.length, w: pkg.width, h: pkg.height };
+  const dims =
+    position.rotationY === 90
+      ? { l: pkg.width, w: pkg.length, h: pkg.height }
+      : { l: pkg.length, w: pkg.width, h: pkg.height };
 
   const L = scaleVal(dims.l);
   const W = scaleVal(dims.w);
@@ -236,8 +243,15 @@ interface TruckViewerProps {
 }
 
 function SceneContent({
-  truck, placedPackages, onSelectPackage, selectedPackageId,
-  highlightedPackageId, showLabels, ghostPosition, ghostPackage, ghostValid,
+  truck,
+  placedPackages,
+  onSelectPackage,
+  selectedPackageId,
+  highlightedPackageId,
+  showLabels,
+  ghostPosition,
+  ghostPackage,
+  ghostValid,
 }: TruckViewerProps) {
   const L = scaleVal(truck.length);
   const W = scaleVal(truck.width);
@@ -282,8 +296,15 @@ function SceneContent({
 }
 
 export default function TruckViewer3D({
-  truck, placedPackages, onSelectPackage, selectedPackageId,
-  highlightedPackageId, showLabels, ghostPosition, ghostPackage, ghostValid,
+  truck,
+  placedPackages,
+  onSelectPackage,
+  selectedPackageId,
+  highlightedPackageId,
+  showLabels,
+  ghostPosition,
+  ghostPackage,
+  ghostValid,
 }: TruckViewerProps) {
   const L = scaleVal(truck.length);
   const W = scaleVal(truck.width);

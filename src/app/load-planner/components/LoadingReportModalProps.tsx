@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { LoadingReport } from '@/lib/loadingOptimizer';
-import { CheckCircle2, Package, Shield, ChevronRight, BarChart3, X,  } from 'lucide-react';
+import { CheckCircle2, Package, Shield, ChevronRight, BarChart3, X } from 'lucide-react';
 
 interface LoadingReportModalProps {
   report: LoadingReport;
@@ -23,8 +23,12 @@ function ScoreRing({ value, label, color }: { value: number; label: string; colo
         <svg className="w-full h-full -rotate-90" viewBox="0 0 72 72">
           <circle cx="36" cy="36" r={r} fill="none" stroke="#334155" strokeWidth="6" />
           <circle
-            cx="36" cy="36" r={r} fill="none"
-            stroke={color} strokeWidth="6"
+            cx="36"
+            cy="36"
+            r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth="6"
             strokeDasharray={`${dash} ${circ}`}
             strokeLinecap="round"
           />
@@ -39,11 +43,23 @@ function ScoreRing({ value, label, color }: { value: number; label: string; colo
 }
 
 export default function LoadingReportModal({
-  report, shipmentId, truckRegistration, onClose, onConfirm, isReadOnly = false,
+  report,
+  shipmentId,
+  truckRegistration,
+  onClose,
+  onConfirm,
+  isReadOnly = false,
 }: LoadingReportModalProps) {
-  const effColor = report.loadingEfficiency >= 75 ? '#22C55E' : report.loadingEfficiency >= 50 ? '#F59E0B' : '#EF4444';
-  const balColor = report.balanceScore >= 75 ? '#22C55E' : report.balanceScore >= 50 ? '#F59E0B' : '#EF4444';
-  const riskColor = report.damageRiskScore <= 30 ? '#22C55E' : report.damageRiskScore <= 60 ? '#F59E0B' : '#EF4444';
+  const effColor =
+    report.loadingEfficiency >= 75
+      ? '#22C55E'
+      : report.loadingEfficiency >= 50
+        ? '#F59E0B'
+        : '#EF4444';
+  const balColor =
+    report.balanceScore >= 75 ? '#22C55E' : report.balanceScore >= 50 ? '#F59E0B' : '#EF4444';
+  const riskColor =
+    report.damageRiskScore <= 30 ? '#22C55E' : report.damageRiskScore <= 60 ? '#F59E0B' : '#EF4444';
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
@@ -56,10 +72,15 @@ export default function LoadingReportModal({
             </div>
             <div>
               <h2 className="text-base font-700 text-foreground">Loading Report</h2>
-              <p className="text-xs text-muted-foreground">{shipmentId} · {truckRegistration}</p>
+              <p className="text-xs text-muted-foreground">
+                {shipmentId} · {truckRegistration}
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+          >
             <X size={16} />
           </button>
         </div>
@@ -82,7 +103,9 @@ export default function LoadingReportModal({
 
           {/* Score rings */}
           <div>
-            <h3 className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-3">Performance Scores</h3>
+            <h3 className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-3">
+              Performance Scores
+            </h3>
             <div className="grid grid-cols-4 gap-2">
               <ScoreRing value={report.spaceUtilization} label="Space Util." color="#0EA5E9" />
               <ScoreRing value={report.weightUtilization} label="Weight Util." color="#F97316" />
@@ -98,10 +121,15 @@ export default function LoadingReportModal({
                 <Shield size={14} className="text-muted-foreground" />
                 <span className="text-xs font-600 text-foreground">Avg. Damage Risk Score</span>
               </div>
-              <span className={`text-sm font-700 ${
-                report.damageRiskScore <= 30 ? 'text-positive' :
-                report.damageRiskScore <= 60 ? 'text-warning' : 'text-negative'
-              }`}>
+              <span
+                className={`text-sm font-700 ${
+                  report.damageRiskScore <= 30
+                    ? 'text-positive'
+                    : report.damageRiskScore <= 60
+                      ? 'text-warning'
+                      : 'text-negative'
+                }`}
+              >
                 {report.damageRiskScore}/100
               </span>
             </div>
@@ -112,8 +140,11 @@ export default function LoadingReportModal({
               />
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">
-              {report.damageRiskScore <= 30 ? 'Excellent — low risk configuration' :
-               report.damageRiskScore <= 60 ? 'Moderate risk — review fragile package placements': 'High risk — consider rearranging fragile packages'}
+              {report.damageRiskScore <= 30
+                ? 'Excellent — low risk configuration'
+                : report.damageRiskScore <= 60
+                  ? 'Moderate risk — review fragile package placements'
+                  : 'High risk — consider rearranging fragile packages'}
             </p>
           </div>
 
@@ -134,8 +165,12 @@ export default function LoadingReportModal({
             </div>
             <div className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground">Left / Right:</span>
-              <span className="font-600 text-foreground">{report.weightDistribution.left}% / {report.weightDistribution.right}%</span>
-              <span className={`ml-auto status-badge text-[9px] ${report.weightDistribution.isBalanced ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'}`}>
+              <span className="font-600 text-foreground">
+                {report.weightDistribution.left}% / {report.weightDistribution.right}%
+              </span>
+              <span
+                className={`ml-auto status-badge text-[9px] ${report.weightDistribution.isBalanced ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'}`}
+              >
                 {report.weightDistribution.isBalanced ? 'Balanced' : 'Unbalanced'}
               </span>
             </div>
@@ -143,7 +178,9 @@ export default function LoadingReportModal({
 
           {/* Recommendations */}
           <div>
-            <h3 className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-2">Recommendations</h3>
+            <h3 className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-2">
+              Recommendations
+            </h3>
             <div className="space-y-1.5">
               {report.recommendations.map((rec, i) => (
                 <div key={i} className="flex items-start gap-2 p-2.5 bg-muted/50 rounded-lg">

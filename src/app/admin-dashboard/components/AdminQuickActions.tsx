@@ -4,14 +4,38 @@ import { Truck, Package, Ship, Users, Download, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import Icon from '@/components/ui/AppIcon';
 
-
 const ACTIONS = [
-  { icon: Truck, label: 'Add Truck', color: 'text-primary', bg: 'bg-primary/10 hover:bg-primary/20' },
-  { icon: Package, label: 'Add Package', color: 'text-accent', bg: 'bg-accent/10 hover:bg-accent/20' },
+  {
+    icon: Truck,
+    label: 'Add Truck',
+    color: 'text-primary',
+    bg: 'bg-primary/10 hover:bg-primary/20',
+  },
+  {
+    icon: Package,
+    label: 'Add Package',
+    color: 'text-accent',
+    bg: 'bg-accent/10 hover:bg-accent/20',
+  },
   { icon: Ship, label: 'Create Shipment', color: 'text-info', bg: 'bg-info/10 hover:bg-info/20' },
-  { icon: Users, label: 'Add Loader', color: 'text-positive', bg: 'bg-positive/10 hover:bg-positive/20' },
-  { icon: Download, label: 'Export Report', color: 'text-muted-foreground', bg: 'bg-muted hover:bg-muted/80' },
-  { icon: RefreshCw, label: 'Sync Fleet Data', color: 'text-muted-foreground', bg: 'bg-muted hover:bg-muted/80' },
+  {
+    icon: Users,
+    label: 'Add Loader',
+    color: 'text-positive',
+    bg: 'bg-positive/10 hover:bg-positive/20',
+  },
+  {
+    icon: Download,
+    label: 'Export Report',
+    color: 'text-muted-foreground',
+    bg: 'bg-muted hover:bg-muted/80',
+  },
+  {
+    icon: RefreshCw,
+    label: 'Sync Fleet Data',
+    color: 'text-muted-foreground',
+    bg: 'bg-muted hover:bg-muted/80',
+  },
 ];
 
 export default function AdminQuickActions() {
@@ -45,14 +69,31 @@ export default function AdminQuickActions() {
               className={`flex flex-col items-center gap-2 p-3 rounded-lg border border-border ${action.bg} transition-all duration-150 active:scale-95 disabled:opacity-60 group`}
             >
               {isLoading ? (
-                <svg className="animate-spin w-4 h-4 text-muted-foreground" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                <svg
+                  className="animate-spin w-4 h-4 text-muted-foreground"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
               ) : (
                 <Icon size={16} className={action.color} />
               )}
-              <span className="text-[11px] font-500 text-foreground text-center leading-tight">{action.label}</span>
+              <span className="text-[11px] font-500 text-foreground text-center leading-tight">
+                {action.label}
+              </span>
             </button>
           );
         })}
@@ -66,8 +107,15 @@ export default function AdminQuickActions() {
           { type: 'warning', text: 'DL-01-CG at 91% capacity', time: '2d ago' },
           { type: 'error', text: 'PKG-006 risk score: 82/100', time: '2d ago' },
         ].map((alert, i) => (
-          <div key={`alert-${i}`} className={`flex items-start gap-2 p-2 rounded-lg ${alert.type === 'error' ? 'bg-negative/5 border border-negative/10' : 'bg-warning/5 border border-warning/10'}`}>
-            <span className={`text-[10px] font-700 ${alert.type === 'error' ? 'text-negative' : 'text-warning'} mt-0.5 flex-shrink-0`}>!</span>
+          <div
+            key={`alert-${i}`}
+            className={`flex items-start gap-2 p-2 rounded-lg ${alert.type === 'error' ? 'bg-negative/5 border border-negative/10' : 'bg-warning/5 border border-warning/10'}`}
+          >
+            <span
+              className={`text-[10px] font-700 ${alert.type === 'error' ? 'text-negative' : 'text-warning'} mt-0.5 flex-shrink-0`}
+            >
+              !
+            </span>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-foreground leading-tight">{alert.text}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">{alert.time}</p>

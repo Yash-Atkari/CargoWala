@@ -3,9 +3,22 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Truck, Package, Ship, Users, MapPin,
-  BarChart3, Bell, Settings, LogOut, ChevronLeft, ChevronRight,
-  PackageCheck, Navigation, X, Box,
+  LayoutDashboard,
+  Truck,
+  Package,
+  Ship,
+  Users,
+  MapPin,
+  BarChart3,
+  Bell,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  PackageCheck,
+  Navigation,
+  X,
+  Box,
 } from 'lucide-react';
 import AppLogo from './ui/AppLogo';
 import { useAuth } from '@/lib/authContext';
@@ -13,11 +26,10 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 
-
 interface NavItem {
   label: string;
   href: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<any>;
   badge?: number;
   group?: string;
 }
@@ -55,7 +67,13 @@ interface SidebarProps {
 }
 
 export default function Sidebar({
-  role, collapsed, mobileOpen, onToggleCollapse, onMobileClose, userName, userEmail,
+  role,
+  collapsed,
+  mobileOpen,
+  onToggleCollapse,
+  onMobileClose,
+  userName,
+  userEmail,
 }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
@@ -70,7 +88,12 @@ export default function Sidebar({
     router.push('/');
   };
 
-  const initials = userName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const initials = userName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <aside
@@ -83,11 +106,15 @@ export default function Sidebar({
       `}
     >
       {/* Header */}
-      <div className={`flex items-center border-b border-border h-14 px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+      <div
+        className={`flex items-center border-b border-border h-14 px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}
+      >
         {!collapsed && (
           <div className="flex items-center gap-2 min-w-0">
             <AppLogo size={28} />
-            <span className="font-semibold text-foreground text-sm tracking-tight truncate">CargoWala</span>
+            <span className="font-semibold text-foreground text-sm tracking-tight truncate">
+              CargoWala
+            </span>
           </div>
         )}
         {collapsed && (
@@ -115,7 +142,9 @@ export default function Sidebar({
       {/* Role badge */}
       {!collapsed && (
         <div className="px-3 pt-3 pb-1">
-          <span className={`status-badge text-xs ${role === 'ADMIN' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'}`}>
+          <span
+            className={`status-badge text-xs ${role === 'ADMIN' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'}`}
+          >
             {role === 'ADMIN' ? 'Fleet Manager' : 'Cargo Loader'}
           </span>
         </div>
@@ -135,7 +164,7 @@ export default function Sidebar({
                 .filter((i) => i.group === group)
                 .map((item) => {
                   const isActive = pathname === item.href;
-                  const Icon = item.icon;
+                  const NavIcon = item.icon;
                   return (
                     <Link
                       key={`nav-${item.label}`}
@@ -145,13 +174,15 @@ export default function Sidebar({
                       className={`
                         flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium
                         transition-all duration-150 group relative
-                        ${isActive
-                          ? 'bg-primary/10 text-primary' :'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ${
+                          isActive
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         }
                         ${collapsed ? 'justify-center' : ''}
                       `}
                     >
-                      <Icon size={16} className="flex-shrink-0" />
+                      <NavIcon size={16} className="flex-shrink-0" />
                       {!collapsed && (
                         <>
                           <span className="truncate">{item.label}</span>

@@ -1,23 +1,70 @@
 import React from 'react';
-import {
-  Truck, Package, Ship, AlertTriangle, Clock, Leaf, Weight, Activity,
-} from 'lucide-react';
+import { Truck, Package, Ship, AlertTriangle, Clock, Leaf, Weight, Activity } from 'lucide-react';
 import MetricCard from '@/components/ui/MetricCard';
+import { MockTruck, MockShipment, MockPackage } from '@/lib/mockData';
 
-// Bento plan: 8 cards → grid-cols-4
-// Row 1: hero Fleet Utilization (spans 2 cols) + Active Shipments + High-Risk Packages (alert)
-// Row 2: Delayed Shipments (warning) + Weight Utilization + Carbon Emissions + Avg Loading Time + Total Packages
+interface AdminMetricsBentoProps {
+  trucks?: MockTruck[];
+  shipments?: MockShipment[];
+  packages?: MockPackage[];
+}
 
-export default function AdminMetricsBento() {
+export default function AdminMetricsBento({
+  trucks = [],
+  shipments = [],
+  packages = [],
+}: AdminMetricsBentoProps) {
+  // 1. Space Utilization calculations
+  const activeTrucks = trucks.filter((t) => t.status === 'LOADING' || t.status === 'IN_TRANSIT');
+  const availableTrucks = trucks.filter((t) => t.status === 'AVAILABLE');
+  const maintenanceTrucks = trucks.filter((t) => t.status === 'MAINTENANCE');
+  
+  const avgSpaceUtil = activeTrucks.length > 0
+    ? (activeTrucks.reduce((sum, t) => sum + t.currentUtilization, 0) / activeTrucks.length).toFixed(1)
+    : '0.0';
+
+  const spaceSubtext = `${activeTrucks.length} of ${trucks.length} trucks active · ${availableTrucks.length} available · ${maintenanceTrucks.length} in maintenance`;
+
+  // 2. Active Shipments
+  const activeShipmentsCount = shipments.filter(
+    (s) => s.status === 'LOADING' || s.status === 'IN_TRANSIT' || s.status === 'PENDING' || s.status === 'DELAYED'
+  ).length;
+  const inTransitCount = shipments.filter((s) => s.status === 'IN_TRANSIT').length;
+  const loadingCount = shipments.filter((s) => s.status === 'LOADING').length;
+  const deliveredTodayCount = shipments.filter((s) => s.status === 'DELIVERED').length;
+
+  // 3. High-Risk Packages
+  const highRiskPackages = packages.filter((p) => p.riskScore >= 70);
+  const fragileCount = packages.filter((p) => p.fragilityLevel === 'FRAGILE').length;
+
+  // 4. Delayed Shipments
+  const delayedShipmentsCount = shipments.filter((s) => s.status === 'DELAYED').length;
+  const delayedNames = shipments
+    .filter((s) => s.status === 'DELAYED')
+    .map((s) => s.id.replace('shipment-', 'SHP-'))
+    .join(', ');
+
+  // 5. Avg Weight Utilization
+  const avgWeightUtil = activeTrucks.length > 0
+    ? (activeTrucks.reduce((sum, t) => sum + t.weightUtilization, 0) / activeTrucks.length).toFixed(1)
+    : '0.0';
+
+  // 6. Total Packages
+  const totalPkgsCount = packages.length;
+  const pendingCount = packages.filter((p) => p.status === 'PENDING').length;
+  const inTransitPkgs = packages.filter((p) => p.status === 'IN_TRANSIT').length;
+  const deliveredPkgs = packages.filter((p) => p.status === 'DELIVERED').length;
+  const damagedPkgs = packages.filter((p) => p.status === 'DAMAGED').length;
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4">
-      {/* Hero: Fleet Utilization — spans 2 cols */}
+      {/* Hero: Fleet Space Utilization */}
       <div className="sm:col-span-2 lg:col-span-2 xl:col-span-2 2xl:col-span-2">
         <MetricCard
           label="Avg Fleet Space Utilization"
-          value="67.4"
+          value={avgSpaceUtil}
           unit="%"
-          subtext="5 of 8 trucks active · 2 available · 1 in maintenance"
+          subtext={spaceSubtext}
           trend="up"
           trendValue="+4.2% vs last week"
           icon={Truck}
@@ -30,10 +77,10 @@ export default function AdminMetricsBento() {
       {/* Active Shipments */}
       <MetricCard
         label="Active Shipments"
-        value="4"
-        subtext="3 in transit · 1 loading now"
+        value={String(activeShipmentsCount)}
+        subtext={`${inTransitCount} in transit · ${loadingCount} loading now`}
         trend="neutral"
-        trendValue="2 delivered today"
+        trendValue={`${deliveredTodayCount} delivered total`}
         icon={Ship}
         iconColor="text-info"
         variant="default"
@@ -42,10 +89,10 @@ export default function AdminMetricsBento() {
       {/* High-Risk Packages — ALERT */}
       <MetricCard
         label="High-Risk Packages"
-        value="7"
-        subtext="4 FRAGILE · 3 score > 70"
+        value={String(highRiskPackages.length)}
+        subtext={`${fragileCount} FRAGILE · ${highRiskPackages.length} score > 70`}
         trend="down"
-        trendValue="+2 since yesterday"
+        trendValue="Safety review active"
         icon={AlertTriangle}
         iconColor="text-negative"
         variant="alert"
@@ -54,10 +101,10 @@ export default function AdminMetricsBento() {
       {/* Delayed Shipments — WARNING */}
       <MetricCard
         label="Delayed Shipments"
-        value="1"
-        subtext="SHP-004 · NH-275 road closure"
+        value={String(delayedShipmentsCount)}
+        subtext={delayedShipmentsCount > 0 ? `${delayedNames} · Check traffic info` : 'All deliveries on schedule'}
         trend="down"
-        trendValue="ETA +28 hrs"
+        trendValue="ETA updates in feed"
         icon={Clock}
         iconColor="text-warning"
         variant="warning"
@@ -66,9 +113,9 @@ export default function AdminMetricsBento() {
       {/* Weight Utilization */}
       <MetricCard
         label="Avg Weight Utilization"
-        value="63.1"
+        value={avgWeightUtil}
         unit="%"
-        subtext="Across 5 active trucks"
+        subtext={`Across ${activeTrucks.length} active vehicles`}
         trend="up"
         trendValue="+2.8%"
         icon={Weight}
@@ -81,7 +128,7 @@ export default function AdminMetricsBento() {
         label="Today's CO₂ Estimate"
         value="89"
         unit="kg"
-        subtext="36 L fuel · 3 active routes"
+        subtext={`${activeTrucks.length * 12} L fuel · ${activeTrucks.length} active routes`}
         trend="down"
         trendValue="-71% vs yesterday"
         icon={Leaf}
@@ -94,7 +141,7 @@ export default function AdminMetricsBento() {
         label="Avg Loading Session"
         value="47"
         unit="min"
-        subtext="Last 6 completed sessions"
+        subtext="Based on last 6 loads"
         trend="up"
         trendValue="-8 min vs avg"
         icon={Activity}
@@ -105,10 +152,10 @@ export default function AdminMetricsBento() {
       {/* Total Packages */}
       <MetricCard
         label="Total Packages (Active)"
-        value="25"
-        subtext="7 pending · 11 in transit · 7 delivered"
+        value={String(totalPkgsCount)}
+        subtext={`${pendingCount} pending · ${inTransitPkgs} in transit · ${deliveredPkgs} delivered`}
         trend="neutral"
-        trendValue="1 damaged"
+        trendValue={`${damagedPkgs} damaged reports`}
         icon={Package}
         iconColor="text-muted-foreground"
         variant="default"

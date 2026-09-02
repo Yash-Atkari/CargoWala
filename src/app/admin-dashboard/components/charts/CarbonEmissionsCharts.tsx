@@ -1,12 +1,25 @@
 'use client';
 import React from 'react';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
 } from 'recharts';
 import { CARBON_EMISSION_DATA } from '@/lib/mockData';
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string }>; label?: string }) => {
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ value: number; name: string }>;
+  label?: string;
+}) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="card-elevated p-3 shadow-elevated text-xs space-y-1.5">
@@ -14,7 +27,10 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
       {payload.map((p) => (
         <div key={`co2-tip-${p.name}`} className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground">{p.name}</span>
-          <span className="font-tabular font-600 text-foreground">{p.value}{p.name === 'CO₂ (kg)' ? ' kg' : ' L'}</span>
+          <span className="font-tabular font-600 text-foreground">
+            {p.value}
+            {p.name === 'CO₂ (kg)' ? ' kg' : ' L'}
+          </span>
         </div>
       ))}
     </div>

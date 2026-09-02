@@ -27,14 +27,20 @@ function ImpactBadge({ impact, type }: { impact: string; type: 'weight' | 'damag
     INCREASES: '↑ Risk',
   };
   return (
-    <span className={`text-[10px] font-600 px-1.5 py-0.5 rounded-full ${colorMap[impact] || 'text-muted-foreground bg-muted'}`}>
+    <span
+      className={`text-[10px] font-600 px-1.5 py-0.5 rounded-full ${colorMap[impact] || 'text-muted-foreground bg-muted'}`}
+    >
       {labelMap[impact] || impact}
     </span>
   );
 }
 
 export default function AIAssistantPanel({
-  recommendations, metrics, distribution, onApplyRecommendation, onHighlightPackage,
+  recommendations,
+  metrics,
+  distribution,
+  onApplyRecommendation,
+  onHighlightPackage,
 }: AIAssistantPanelProps) {
   return (
     <div className="flex flex-col h-full">
@@ -45,7 +51,9 @@ export default function AIAssistantPanel({
         </div>
         <div>
           <h3 className="text-sm font-600 text-foreground">AI Loading Assistant</h3>
-          <p className="text-[10px] text-muted-foreground">Explainable optimization recommendations</p>
+          <p className="text-[10px] text-muted-foreground">
+            Explainable optimization recommendations
+          </p>
         </div>
       </div>
 
@@ -55,15 +63,24 @@ export default function AIAssistantPanel({
           <div className="card-elevated p-2.5 rounded-lg">
             <div className="flex items-center gap-1.5 mb-1">
               <TrendingUp size={12} className="text-primary" />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Space Used</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Space Used
+              </span>
             </div>
-            <div className="text-lg font-700 text-foreground font-tabular">{metrics.spaceUtilization}%</div>
+            <div className="text-lg font-700 text-foreground font-tabular">
+              {metrics.spaceUtilization}%
+            </div>
             <div className="utilization-bar mt-1">
               <div
                 className="utilization-fill"
                 style={{
                   width: `${metrics.spaceUtilization}%`,
-                  background: metrics.spaceUtilization > 80 ? '#22C55E' : metrics.spaceUtilization > 50 ? '#F59E0B' : '#EF4444',
+                  background:
+                    metrics.spaceUtilization > 80
+                      ? '#22C55E'
+                      : metrics.spaceUtilization > 50
+                        ? '#F59E0B'
+                        : '#EF4444',
                 }}
               />
             </div>
@@ -71,15 +88,24 @@ export default function AIAssistantPanel({
           <div className="card-elevated p-2.5 rounded-lg">
             <div className="flex items-center gap-1.5 mb-1">
               <Scale size={12} className="text-accent" />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Weight Used</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Weight Used
+              </span>
             </div>
-            <div className="text-lg font-700 text-foreground font-tabular">{metrics.weightUtilization}%</div>
+            <div className="text-lg font-700 text-foreground font-tabular">
+              {metrics.weightUtilization}%
+            </div>
             <div className="utilization-bar mt-1">
               <div
                 className="utilization-fill"
                 style={{
                   width: `${metrics.weightUtilization}%`,
-                  background: metrics.weightUtilization > 90 ? '#EF4444' : metrics.weightUtilization > 60 ? '#22C55E' : '#F59E0B',
+                  background:
+                    metrics.weightUtilization > 90
+                      ? '#EF4444'
+                      : metrics.weightUtilization > 60
+                        ? '#22C55E'
+                        : '#F59E0B',
                 }}
               />
             </div>
@@ -90,7 +116,9 @@ export default function AIAssistantPanel({
         <div className="card-elevated p-3 rounded-lg">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-600 text-foreground">Weight Distribution</span>
-            <span className={`status-badge text-[10px] ${distribution.isBalanced ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'}`}>
+            <span
+              className={`status-badge text-[10px] ${distribution.isBalanced ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'}`}
+            >
               {distribution.isBalanced ? 'Balanced' : 'Unbalanced'}
             </span>
           </div>
@@ -123,10 +151,15 @@ export default function AIAssistantPanel({
                 style={{ width: `${distribution.left}%` }}
               />
             </div>
-            <span className="text-foreground font-600">{distribution.left}% / {distribution.right}%</span>
+            <span className="text-foreground font-600">
+              {distribution.left}% / {distribution.right}%
+            </span>
           </div>
           {distribution.warnings.map((w, i) => (
-            <div key={i} className="flex items-start gap-1.5 mt-2 p-2 bg-warning/10 rounded-lg border border-warning/20">
+            <div
+              key={i}
+              className="flex items-start gap-1.5 mt-2 p-2 bg-warning/10 rounded-lg border border-warning/20"
+            >
               <ShieldAlert size={11} className="text-warning flex-shrink-0 mt-0.5" />
               <span className="text-[10px] text-warning">{w}</span>
             </div>
@@ -142,7 +175,9 @@ export default function AIAssistantPanel({
 
           {recommendations.length === 0 ? (
             <div className="card-elevated p-4 rounded-lg text-center">
-              <p className="text-xs text-muted-foreground">All packages placed or no packages available.</p>
+              <p className="text-xs text-muted-foreground">
+                All packages placed or no packages available.
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -158,12 +193,18 @@ export default function AIAssistantPanel({
                       <span className="w-5 h-5 rounded-full gradient-primary flex items-center justify-center text-[10px] font-700 text-white flex-shrink-0">
                         {idx + 1}
                       </span>
-                      <span className="text-xs font-600 text-foreground truncate">{rec.packageName}</span>
+                      <span className="text-xs font-600 text-foreground truncate">
+                        {rec.packageName}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-positive font-600 flex-shrink-0">+{rec.utilizationImprovement}%</span>
+                    <span className="text-[10px] text-positive font-600 flex-shrink-0">
+                      +{rec.utilizationImprovement}%
+                    </span>
                   </div>
 
-                  <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">{rec.reason}</p>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                    {rec.reason}
+                  </p>
 
                   <div className="flex items-center gap-1 mb-2 flex-wrap">
                     <span className="text-[10px] text-muted-foreground">Orient:</span>

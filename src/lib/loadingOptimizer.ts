@@ -22,24 +22,24 @@ export interface PlacedPackage {
 }
 
 export interface WeightDistribution {
-  front: number;   // % of total weight in front third
-  center: number;  // % in center third
-  rear: number;    // % in rear third
-  left: number;    // % on left half
-  right: number;   // % on right half
+  front: number; // % of total weight in front third
+  center: number; // % in center third
+  rear: number; // % in rear third
+  left: number; // % on left half
+  right: number; // % on right half
   isBalanced: boolean;
   warnings: string[];
 }
 
 export interface SpaceMetrics {
-  totalVolume: number;       // cm³
-  usedVolume: number;        // cm³
-  spaceUtilization: number;  // 0–100
-  totalWeight: number;       // kg
-  maxWeight: number;         // kg
+  totalVolume: number; // cm³
+  usedVolume: number; // cm³
+  spaceUtilization: number; // 0–100
+  totalWeight: number; // kg
+  maxWeight: number; // kg
   weightUtilization: number; // 0–100
-  remainingVolume: number;   // cm³
-  remainingWeight: number;   // kg
+  remainingVolume: number; // cm³
+  remainingWeight: number; // kg
   packageCount: number;
 }
 
@@ -60,16 +60,19 @@ export interface LoadingReport {
   loadedPackages: number;
   spaceUtilization: number;
   weightUtilization: number;
-  balanceScore: number;       // 0–100
-  damageRiskScore: number;    // 0–100 (lower = better)
-  loadingEfficiency: number;  // 0–100
+  balanceScore: number; // 0–100
+  damageRiskScore: number; // 0–100 (lower = better)
+  loadingEfficiency: number; // 0–100
   recommendations: string[];
   weightDistribution: WeightDistribution;
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-function getEffectiveDimensions(pkg: MockPackage, rotationY: number): { l: number; w: number; h: number } {
+function getEffectiveDimensions(
+  pkg: MockPackage,
+  rotationY: number
+): { l: number; w: number; h: number } {
   if (rotationY === 90) {
     return { l: pkg.width, w: pkg.length, h: pkg.height };
   }
@@ -77,24 +80,42 @@ function getEffectiveDimensions(pkg: MockPackage, rotationY: number): { l: numbe
 }
 
 function boxesOverlap(
-  ax: number, ay: number, az: number, al: number, ah: number, aw: number,
-  bx: number, by: number, bz: number, bl: number, bh: number, bw: number,
+  ax: number,
+  ay: number,
+  az: number,
+  al: number,
+  ah: number,
+  aw: number,
+  bx: number,
+  by: number,
+  bz: number,
+  bl: number,
+  bh: number,
+  bw: number,
   tolerance = 0.5
 ): boolean {
   return (
-    ax < bx + bl - tolerance && ax + al > bx + tolerance &&
-    ay < by + bh - tolerance && ay + ah > by + tolerance &&
-    az < bz + bw - tolerance && az + aw > bz + tolerance
+    ax < bx + bl - tolerance &&
+    ax + al > bx + tolerance &&
+    ay < by + bh - tolerance &&
+    ay + ah > by + tolerance &&
+    az < bz + bw - tolerance &&
+    az + aw > bz + tolerance
   );
 }
 
 function isInsideTruck(
-  pos: PackagePosition, dims: { l: number; w: number; h: number }, truck: MockTruck
+  pos: PackagePosition,
+  dims: { l: number; w: number; h: number },
+  truck: MockTruck
 ): boolean {
   return (
-    pos.x >= 0 && pos.x + dims.l <= truck.length &&
-    pos.y >= 0 && pos.y + dims.h <= truck.height &&
-    pos.z >= 0 && pos.z + dims.w <= truck.width
+    pos.x >= 0 &&
+    pos.x + dims.l <= truck.length &&
+    pos.y >= 0 &&
+    pos.y + dims.h <= truck.height &&
+    pos.z >= 0 &&
+    pos.z + dims.w <= truck.width
   );
 }
 
@@ -111,18 +132,33 @@ export function checkCollision(
 
   // Boundary check
   if (!isInsideTruck(newPos, dims, truck)) {
-    if (newPos.x < 0 || newPos.x + dims.l > truck.length) reasons.push('Package extends beyond truck length');
-    if (newPos.y < 0 || newPos.y + dims.h > truck.height) reasons.push('Package exceeds truck height');
-    if (newPos.z < 0 || newPos.z + dims.w > truck.width) reasons.push('Package extends beyond truck width');
+    if (newPos.x < 0 || newPos.x + dims.l > truck.length)
+      reasons.push('Package extends beyond truck length');
+    if (newPos.y < 0 || newPos.y + dims.h > truck.height)
+      reasons.push('Package exceeds truck height');
+    if (newPos.z < 0 || newPos.z + dims.w > truck.width)
+      reasons.push('Package extends beyond truck width');
   }
 
   // Overlap check
   for (const p of placed) {
     const pd = getEffectiveDimensions(p.package, p.position.rotationY);
-    if (boxesOverlap(
-      newPos.x, newPos.y, newPos.z, dims.l, dims.h, dims.w,
-      p.position.x, p.position.y, p.position.z, pd.l, pd.h, pd.w
-    )) {
+    if (
+      boxesOverlap(
+        newPos.x,
+        newPos.y,
+        newPos.z,
+        dims.l,
+        dims.h,
+        dims.w,
+        p.position.x,
+        p.position.y,
+        p.position.z,
+        pd.l,
+        pd.h,
+        pd.w
+      )
+    ) {
       reasons.push(`Overlaps with ${p.package.name}`);
     }
   }
@@ -168,8 +204,10 @@ export function calculateDamageRisk(
   for (const p of allPlaced) {
     const pd = getEffectiveDimensions(p.package, p.position.rotationY);
     const horizontalOverlap =
-      pos.x < p.position.x + pd.l && pos.x + dims.l > p.position.x &&
-      pos.z < p.position.z + pd.w && pos.z + dims.w > p.position.z;
+      pos.x < p.position.x + pd.l &&
+      pos.x + dims.l > p.position.x &&
+      pos.z < p.position.z + pd.w &&
+      pos.z + dims.w > p.position.z;
     if (horizontalOverlap && p.position.y >= pos.y + dims.h - 1) {
       weightAbove += p.package.weight;
     }
@@ -199,7 +237,9 @@ export function calculateDamageRisk(
   // Delivery sequence risk (early delivery = rear = more handling)
   if (pkg.deliverySequence <= 2 && pos.x > truck.length * 0.6) {
     score += 8;
-    reasons.push('Early-delivery package placed deep in truck — requires unloading other packages first');
+    reasons.push(
+      'Early-delivery package placed deep in truck — requires unloading other packages first'
+    );
   }
 
   // Priority risk
@@ -230,7 +270,11 @@ export function calculateWeightDistribution(
   const rearThird = (truck.length * 2) / 3;
   const leftHalf = truck.width / 2;
 
-  let frontW = 0, centerW = 0, rearW = 0, leftW = 0, rightW = 0;
+  let frontW = 0,
+    centerW = 0,
+    rearW = 0,
+    leftW = 0,
+    rightW = 0;
 
   for (const p of placed) {
     const dims = getEffectiveDimensions(p.package, p.position.rotationY);
@@ -256,8 +300,10 @@ export function calculateWeightDistribution(
   const lrDiff = Math.abs(left - right);
   const frDiff = Math.abs(front - rear);
 
-  if (lrDiff > 30) warnings.push(`Unbalanced left-right distribution (${left}% / ${right}%) — risk of tipping`);
-  if (frDiff > 40) warnings.push(`Unbalanced front-rear distribution (${front}% / ${rear}%) — affects handling`);
+  if (lrDiff > 30)
+    warnings.push(`Unbalanced left-right distribution (${left}% / ${right}%) — risk of tipping`);
+  if (frDiff > 40)
+    warnings.push(`Unbalanced front-rear distribution (${front}% / ${rear}%) — affects handling`);
   if (front > 55) warnings.push('Too much weight at front — may affect steering');
   if (rear > 60) warnings.push('Too much weight at rear — may cause instability');
 
@@ -325,8 +371,10 @@ export function findBestPosition(
         for (const p of placed) {
           const pd = getEffectiveDimensions(p.package, p.position.rotationY);
           const horizontalOverlap =
-            xCandidate < p.position.x + pd.l && xCandidate + dims.l > p.position.x &&
-            z < p.position.z + pd.w && z + dims.w > p.position.z;
+            xCandidate < p.position.x + pd.l &&
+            xCandidate + dims.l > p.position.x &&
+            z < p.position.z + pd.w &&
+            z + dims.w > p.position.z;
           if (horizontalOverlap) {
             minY = Math.max(minY, p.position.y + pd.h);
           }
@@ -367,10 +415,7 @@ export function findBestPosition(
 
 // ─── AUTO-OPTIMIZE (BIN PACKING) ─────────────────────────────────────────────
 
-export function autoOptimize(
-  packages: MockPackage[],
-  truck: MockTruck
-): PlacedPackage[] {
+export function autoOptimize(packages: MockPackage[], truck: MockTruck): PlacedPackage[] {
   // Sort packages by optimization priority:
   // 1. Heavy + non-fragile → floor first
   // 2. Large volume → early placement
@@ -378,7 +423,13 @@ export function autoOptimize(
   // 4. Fragile → top layers
   const sorted = [...packages].sort((a, b) => {
     const fragScore = (p: MockPackage) =>
-      p.fragilityLevel === 'FRAGILE' ? 3 : p.fragilityLevel === 'HIGH' ? 2 : p.fragilityLevel === 'MEDIUM' ? 1 : 0;
+      p.fragilityLevel === 'FRAGILE'
+        ? 3
+        : p.fragilityLevel === 'HIGH'
+          ? 2
+          : p.fragilityLevel === 'MEDIUM'
+            ? 1
+            : 0;
     const volA = a.length * a.width * a.height;
     const volB = b.length * b.width * b.height;
 
@@ -439,7 +490,8 @@ export function generateRecommendations(
     const { score: riskScore } = calculateDamageRisk(pkg, position, placed, truck);
     const dims = getEffectiveDimensions(pkg, position.rotationY);
     const pkgVol = dims.l * dims.w * dims.h;
-    const utilizationImprovement = Math.round((pkgVol / (truck.length * truck.width * truck.height)) * 100 * 10) / 10;
+    const utilizationImprovement =
+      Math.round((pkgVol / (truck.length * truck.width * truck.height)) * 100 * 10) / 10;
 
     // Determine weight balance impact
     const cx = position.x + dims.l / 2;
@@ -454,7 +506,8 @@ export function generateRecommendations(
 
     // Build reason
     let reason = '';
-    const posZone = cx < truck.length / 3 ? 'front' : cx < (truck.length * 2) / 3 ? 'center' : 'rear';
+    const posZone =
+      cx < truck.length / 3 ? 'front' : cx < (truck.length * 2) / 3 ? 'center' : 'rear';
     if (pkg.deliverySequence <= 2) {
       reason = `Place near the ${posZone} — delivery sequence #${pkg.deliverySequence} means it will be unloaded early, so rear placement allows easy access without disturbing other packages.`;
     } else if (pkg.fragilityLevel === 'FRAGILE' || pkg.fragilityLevel === 'HIGH') {
@@ -465,9 +518,10 @@ export function generateRecommendations(
       reason = `Optimal fit at position (${Math.round(position.x)}cm, ${Math.round(position.y)}cm, ${Math.round(position.z)}cm) — maximizes space utilization by +${utilizationImprovement}%.`;
     }
 
-    const orientationLabel = position.rotationY === 90
-      ? `Rotated 90° (${dims.l}×${dims.w}×${dims.h}cm)`
-      : `Standard orientation (${dims.l}×${dims.w}×${dims.h}cm)`;
+    const orientationLabel =
+      position.rotationY === 90
+        ? `Rotated 90° (${dims.l}×${dims.w}×${dims.h}cm)`
+        : `Standard orientation (${dims.l}×${dims.w}×${dims.h}cm)`;
 
     recommendations.push({
       packageId: pkg.id,
@@ -495,9 +549,10 @@ export function generateLoadingReport(
   const metrics = calculateSpaceMetrics(placed, truck);
   const dist = calculateWeightDistribution(placed, truck);
 
-  const avgDamageRisk = placed.length > 0
-    ? Math.round(placed.reduce((s, p) => s + p.damageRisk, 0) / placed.length)
-    : 0;
+  const avgDamageRisk =
+    placed.length > 0
+      ? Math.round(placed.reduce((s, p) => s + p.damageRisk, 0) / placed.length)
+      : 0;
 
   // Balance score: 100 = perfect, deduct for imbalance
   const lrDiff = Math.abs(dist.left - dist.right);
@@ -506,21 +561,30 @@ export function generateLoadingReport(
 
   // Loading efficiency: considers space util, weight util, balance, and damage risk
   const loadingEfficiency = Math.round(
-    (metrics.spaceUtilization * 0.35 +
+    metrics.spaceUtilization * 0.35 +
       metrics.weightUtilization * 0.25 +
       balanceScore * 0.25 +
-      (100 - avgDamageRisk) * 0.15)
+      (100 - avgDamageRisk) * 0.15
   );
 
   const recommendations: string[] = [];
-  if (metrics.spaceUtilization < 60) recommendations.push('Space utilization is below 60% — consider adding more packages or using a smaller truck.');
-  if (metrics.weightUtilization < 50) recommendations.push('Weight utilization is low — truck capacity is underused.');
-  if (!dist.isBalanced) recommendations.push('Load is unbalanced — redistribute packages for safer transport.');
-  if (avgDamageRisk > 50) recommendations.push('Average damage risk is high — review fragile package placements.');
+  if (metrics.spaceUtilization < 60)
+    recommendations.push(
+      'Space utilization is below 60% — consider adding more packages or using a smaller truck.'
+    );
+  if (metrics.weightUtilization < 50)
+    recommendations.push('Weight utilization is low — truck capacity is underused.');
+  if (!dist.isBalanced)
+    recommendations.push('Load is unbalanced — redistribute packages for safer transport.');
+  if (avgDamageRisk > 50)
+    recommendations.push('Average damage risk is high — review fragile package placements.');
   if (placed.length < allPackages.length) {
-    recommendations.push(`${allPackages.length - placed.length} package(s) could not be placed — consider a larger truck.`);
+    recommendations.push(
+      `${allPackages.length - placed.length} package(s) could not be placed — consider a larger truck.`
+    );
   }
-  if (recommendations.length === 0) recommendations.push('Excellent loading configuration — all metrics are within optimal range.');
+  if (recommendations.length === 0)
+    recommendations.push('Excellent loading configuration — all metrics are within optimal range.');
 
   return {
     totalPackages: allPackages.length,

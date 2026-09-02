@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/lib/authContext';
 import AppLayout from '@/components/AppLayout';
@@ -10,19 +10,64 @@ import AdminQuickActions from './AdminQuickActions';
 import AdminTrucksTable from './AdminTrucksTable';
 import AdminPackagesTable from './AdminPackagesTable';
 import AdminShipmentsTable from './AdminShipmentsTable';
+import { MockTruck, MockShipment, MockPackage } from '@/lib/mockData';
 
 type ActiveSection = 'dashboard' | 'trucks' | 'packages' | 'shipments';
 
 function AdminDashboardInner() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [activeSection] = useState<ActiveSection>('dashboard');
+
+  const [trucks, setTrucks] = useState<MockTruck[]>([]);
+  const [shipments, setShipments] = useState<MockShipment[]>([]);
+  const [packages, setPackages] = useState<MockPackage[]>([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+
+  // Fetch admin dashboard data
+  useEffect(() => {
+    if (!isAuthenticated || !user || user.role !== 'ADMIN') return;
+
+    const fetchDashboardData = async () => {
+      try {
+        setDashboardLoading(true);
+        const [trucksRes, shipmentsRes, packagesRes] = await Promise.all([
+          fetch('/api/trucks'),
+          fetch('/api/shipments'),
+          fetch('/api/packages'),
+        ]);
+        
+        if (trucksRes.ok) setTrucks(await trucksRes.json());
+        if (shipmentsRes.ok) setShipments(await shipmentsRes.json());
+        if (packagesRes.ok) setPackages(await packagesRes.json());
+      } catch (err) {
+        console.error('Error fetching admin dashboard data:', err);
+      } finally {
+        setDashboardLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [isAuthenticated, user]);
+
+  if (isLoading || (isAuthenticated && user && user.role === 'ADMIN' && dashboardLoading)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground font-medium">Verifying session & fetching fleet metrics...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">Please sign in to access the admin dashboard.</p>
+          <p className="text-muted-foreground mb-4">
+            Please sign in to access the admin dashboard.
+          </p>
           <button
             onClick={() => router.push('/')}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-600 hover:bg-primary/90 transition-colors"
@@ -39,7 +84,10 @@ function AdminDashboardInner() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Access denied. Admin role required.</p>
-          <button onClick={() => router.push('/loader-dashboard')} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-600">
+          <button
+            onClick={() => router.push('/loader-dashboard')}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-600"
+          >
             Go to Loader Dashboard
           </button>
         </div>
@@ -67,10 +115,10 @@ function AdminDashboardInner() {
         </div>
 
         {/* Metrics bento */}
-        <AdminMetricsBento />
+        <AdminMetricsBento trucks={trucks} shipments={shipments} packages={packages} />
 
         {/* Charts row */}
-        <AdminChartsRow />
+        <AdminChartsRow trucks={trucks} shipments={shipments} />
 
         {/* Bottom section: activity + quick actions */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -83,12 +131,12 @@ function AdminDashboardInner() {
         </div>
 
         {/* Trucks table */}
-        <AdminTrucksTable />
+        <AdminTrucksTable trucks={trucks} />
 
         {/* Packages & Shipments */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <AdminShipmentsTable />
-          <AdminPackagesTable />
+          <AdminShipmentsTable shipments={shipments} />
+          <AdminPackagesTable packages={packages} />
         </div>
       </div>
     </AppLayout>
