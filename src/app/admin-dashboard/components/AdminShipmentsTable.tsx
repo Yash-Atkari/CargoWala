@@ -1,22 +1,23 @@
 'use client';
 import React, { useState } from 'react';
 import { Search, Ship } from 'lucide-react';
-import { MOCK_SHIPMENTS } from '@/lib/mockData';
+import { Shipment } from '@/lib/types';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 
 interface AdminShipmentsTableProps {
-  shipments?: typeof MOCK_SHIPMENTS;
+  shipments?: Shipment[];
 }
 
-export default function AdminShipmentsTable({ shipments = MOCK_SHIPMENTS }: AdminShipmentsTableProps) {
+export default function AdminShipmentsTable({ shipments = [] }: AdminShipmentsTableProps) {
   const [search, setSearch] = useState('');
 
   const filtered = shipments?.filter(
     (s) =>
-      s?.origin?.toLowerCase()?.includes(search?.toLowerCase()) ||
-      s?.destination?.toLowerCase()?.includes(search?.toLowerCase()) ||
-      s?.truckRegistration?.toLowerCase()?.includes(search?.toLowerCase())
+      (s?.origin && s.origin.toLowerCase().includes(search.toLowerCase())) ||
+      (s?.destination && s.destination.toLowerCase().includes(search.toLowerCase())) ||
+      (s?.truckRegistration && s.truckRegistration.toLowerCase().includes(search.toLowerCase())) ||
+      (s?.id && s.id.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -33,7 +34,7 @@ export default function AdminShipmentsTable({ shipments = MOCK_SHIPMENTS }: Admi
           />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search shipments..."
             value={search}
             onChange={(e) => setSearch(e?.target?.value)}
             className="pl-8 pr-3 py-1.5 bg-muted border border-input rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring w-40"
@@ -70,7 +71,7 @@ export default function AdminShipmentsTable({ shipments = MOCK_SHIPMENTS }: Admi
                 >
                   <td className="px-4 py-3">
                     <span className="text-xs font-mono font-600 text-primary">
-                      {shp?.id?.replace('shipment-', 'SHP-')}
+                      {shp?.id ? shp.id.replace('shipment-', 'SHP-') : ''}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -98,7 +99,7 @@ export default function AdminShipmentsTable({ shipments = MOCK_SHIPMENTS }: Admi
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-xs font-tabular text-foreground">
-                      {(shp?.totalWeight / 1000)?.toFixed(1)}t
+                      {((shp?.totalWeight || 0) / 1000)?.toFixed(1)}t
                     </span>
                   </td>
                   <td className="px-4 py-3">

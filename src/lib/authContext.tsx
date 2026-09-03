@@ -1,9 +1,9 @@
 'use client';
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { MOCK_USERS, MockUser, UserRole } from './mockData';
+import { User, UserRole } from './types';
 
 interface AuthContextType {
-  user: MockUser | null;
+  user: User | null;
   login: (
     email: string,
     password: string
@@ -16,7 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<MockUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {

@@ -1,16 +1,16 @@
 'use client';
 import React, { useState } from 'react';
-import { Search, Edit, Eye, MoreHorizontal, Truck } from 'lucide-react';
-import { MOCK_TRUCKS } from '@/lib/mockData';
+import { Search, Truck as TruckIcon } from 'lucide-react';
+import { Truck } from '@/lib/types';
 import StatusBadge from '@/components/ui/StatusBadge';
 import UtilizationBar from '@/components/ui/UtilizationBar';
 import EmptyState from '@/components/ui/EmptyState';
 
 interface AdminTrucksTableProps {
-  trucks?: MockTruck[];
+  trucks?: Truck[];
 }
 
-export default function AdminTrucksTable({ trucks = MOCK_TRUCKS }: AdminTrucksTableProps) {
+export default function AdminTrucksTable({ trucks = [] }: AdminTrucksTableProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -29,7 +29,7 @@ export default function AdminTrucksTable({ trucks = MOCK_TRUCKS }: AdminTrucksTa
         <div>
           <h3 className="text-sm font-600 text-foreground">Fleet Trucks</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {trucks?.length} trucks registered
+            {trucks?.length} trucks registered in fleet
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -63,7 +63,7 @@ export default function AdminTrucksTable({ trucks = MOCK_TRUCKS }: AdminTrucksTa
       <div className="overflow-x-auto scrollbar-thin">
         {filtered?.length === 0 ? (
           <EmptyState
-            icon={Truck}
+            icon={TruckIcon}
             title="No trucks found"
             description="No trucks match your current search or filter criteria."
             action={{
@@ -87,7 +87,6 @@ export default function AdminTrucksTable({ trucks = MOCK_TRUCKS }: AdminTrucksTa
                   'Weight Util.',
                   'Assigned Loader',
                   'Status',
-                  '',
                 ]?.map((col) => (
                   <th
                     key={`th-truck-${col}`}
@@ -119,7 +118,7 @@ export default function AdminTrucksTable({ trucks = MOCK_TRUCKS }: AdminTrucksTa
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-xs font-tabular text-foreground">
-                      {(truck?.maxWeight / 1000)?.toFixed(1)}t
+                      {((truck?.maxWeight || 0) / 1000)?.toFixed(1)}t
                     </span>
                   </td>
                   <td className="px-4 py-3 min-w-[100px]">
@@ -138,28 +137,6 @@ export default function AdminTrucksTable({ trucks = MOCK_TRUCKS }: AdminTrucksTa
                   <td className="px-4 py-3">
                     <StatusBadge variant={truck?.status} />
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        title="View truck details"
-                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Eye size={13} />
-                      </button>
-                      <button
-                        title="Edit truck"
-                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Edit size={13} />
-                      </button>
-                      <button
-                        title="More options"
-                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <MoreHorizontal size={13} />
-                      </button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -171,16 +148,6 @@ export default function AdminTrucksTable({ trucks = MOCK_TRUCKS }: AdminTrucksTa
         <span className="text-xs text-muted-foreground">
           Showing {filtered?.length} of {trucks?.length} trucks
         </span>
-        <div className="flex items-center gap-1">
-          {[1]?.map((page) => (
-            <button
-              key={`page-${page}`}
-              className="w-6 h-6 rounded text-xs font-600 bg-primary/10 text-primary"
-            >
-              {page}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

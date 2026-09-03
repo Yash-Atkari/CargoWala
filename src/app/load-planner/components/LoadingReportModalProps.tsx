@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { LoadingReport } from '@/lib/loadingOptimizer';
-import { CheckCircle2, Package, Shield, ChevronRight, BarChart3, X } from 'lucide-react';
+import { CheckCircle2, Package, Shield, ChevronRight, BarChart3, X, AlertTriangle, Sparkles, Gauge } from 'lucide-react';
 
 interface LoadingReportModalProps {
   report: LoadingReport;
@@ -61,19 +61,33 @@ export default function LoadingReportModal({
   const riskColor =
     report.damageRiskScore <= 30 ? '#22C55E' : report.damageRiskScore <= 60 ? '#F59E0B' : '#EF4444';
 
+  const strategyLabels: Record<string, string> = {
+    BALANCED: 'Balanced Safety & Stability Policy',
+    SPACE_MAX: 'Space Maximizer Policy',
+    FRAGILITY_FIRST: 'Fragility & Safety Policy',
+    LIFO_PRIORITY: 'LIFO Sequence Policy',
+  };
+
+  const stability = report.stabilityAnalysis;
+
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-thin animate-slide-up">
+    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto scrollbar-thin animate-slide-up shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shadow-md shadow-primary/20">
               <BarChart3 size={18} className="text-white" />
             </div>
             <div>
-              <h2 className="text-base font-700 text-foreground">Loading Report</h2>
-              <p className="text-xs text-muted-foreground">
-                {shipmentId} · {truckRegistration}
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-700 text-foreground">AI Loading & Stability Report</h2>
+                <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold">
+                  {strategyLabels[report.strategy] || report.strategy}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Shipment {shipmentId} · Vehicle {truckRegistration}
               </p>
             </div>
           </div>
@@ -87,23 +101,32 @@ export default function LoadingReportModal({
 
         <div className="p-5 space-y-5">
           {/* Package summary */}
-          <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-xl border border-primary/20">
-            <Package size={20} className="text-primary" />
-            <div>
-              <p className="text-sm font-600 text-foreground">
-                {report.loadedPackages} / {report.totalPackages} packages loaded
-              </p>
-              {report.loadedPackages < report.totalPackages && (
-                <p className="text-xs text-warning">
-                  {report.totalPackages - report.loadedPackages} package(s) could not be placed
+          <div className="flex items-center justify-between p-3.5 bg-primary/5 rounded-xl border border-primary/20">
+            <div className="flex items-center gap-3">
+              <Package size={20} className="text-primary flex-shrink-0" />
+              <div>
+                <p className="text-sm font-700 text-foreground">
+                  {report.loadedPackages} / {report.totalPackages} packages optimized
                 </p>
-              )}
+                {report.loadedPackages < report.totalPackages ? (
+                  <p className="text-xs text-warning">
+                    {report.totalPackages - report.loadedPackages} package(s) exceed capacity limits
+                  </p>
+                ) : (
+                  <p className="text-xs text-positive">
+                    100% manifest cargo accommodated
+                  </p>
+                )}
+              </div>
             </div>
+            <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-lg">
+              {report.steps.length} Steps
+            </span>
           </div>
 
-          {/* Score rings */}
+          {/* Performance score rings */}
           <div>
-            <h3 className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-3">
+            <h3 className="text-xs font-700 text-muted-foreground uppercase tracking-wider mb-3">
               Performance Scores
             </h3>
             <div className="grid grid-cols-4 gap-2">
@@ -114,15 +137,46 @@ export default function LoadingReportModal({
             </div>
           </div>
 
+          {/* Static Rollover Threshold (SRT) & Stability */}
+          {stability && (
+            <div className="card-elevated p-3.5 rounded-xl border border-border space-y-2 bg-slate-950/40">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Gauge size={14} className="text-emerald-400" />
+                  <h3 className="text-xs font-700 text-foreground">Static Rollover Threshold (SRT)</h3>
+                </div>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    stability.rolloverRiskLevel === 'OPTIMAL'
+                      ? 'bg-positive/10 text-positive'
+                      : stability.rolloverRiskLevel === 'MODERATE'
+                        ? 'bg-warning/10 text-warning'
+                        : 'bg-negative/10 text-negative'
+                  }`}
+                >
+                  {stability.staticRolloverThreshold}g ({stability.rolloverRiskLevel})
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-800 text-slate-400">
+                <div>
+                  Steer Axle: <strong className="text-white">{stability.steerAxlePct}% ({stability.steerAxleKg}kg)</strong>
+                </div>
+                <div>
+                  Drive Axle: <strong className="text-white">{stability.driveAxlePct}% ({stability.driveAxleKg}kg)</strong>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Damage risk */}
-          <div className="card-elevated p-3 rounded-xl">
+          <div className="card-elevated p-3.5 rounded-xl border border-border">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Shield size={14} className="text-muted-foreground" />
-                <span className="text-xs font-600 text-foreground">Avg. Damage Risk Score</span>
+                <Shield size={14} className="text-primary" />
+                <span className="text-xs font-700 text-foreground">Average Damage Risk Score</span>
               </div>
               <span
-                className={`text-sm font-700 ${
+                className={`text-sm font-bold ${
                   report.damageRiskScore <= 30
                     ? 'text-positive'
                     : report.damageRiskScore <= 60
@@ -139,53 +193,43 @@ export default function LoadingReportModal({
                 style={{ width: `${report.damageRiskScore}%`, background: riskColor }}
               />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              {report.damageRiskScore <= 30
-                ? 'Excellent — low risk configuration'
-                : report.damageRiskScore <= 60
-                  ? 'Moderate risk — review fragile package placements'
-                  : 'High risk — consider rearranging fragile packages'}
-            </p>
           </div>
 
-          {/* Weight distribution */}
-          <div className="card-elevated p-3 rounded-xl">
-            <h3 className="text-xs font-600 text-foreground mb-2">Weight Distribution</h3>
-            <div className="grid grid-cols-3 gap-2 mb-2">
-              {[
-                { label: 'Front', val: report.weightDistribution.front },
-                { label: 'Center', val: report.weightDistribution.center },
-                { label: 'Rear', val: report.weightDistribution.rear },
-              ].map((z) => (
-                <div key={z.label} className="text-center p-2 bg-muted/50 rounded-lg">
-                  <div className="text-[10px] text-muted-foreground">{z.label}</div>
-                  <div className="text-sm font-700 text-foreground">{z.val}%</div>
+          {/* Constraint Health Check */}
+          {report.constraints && (
+            <div className="card-elevated p-3.5 rounded-xl border border-border space-y-2">
+              <h3 className="text-xs font-700 text-foreground">Constraint Compliance Summary</h3>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className={report.constraints.volumeFit ? 'text-positive' : 'text-negative'} />
+                  <span>Volumetric Capacity</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className={report.constraints.weightLimit ? 'text-positive' : 'text-negative'} />
+                  <span>Payload Limit</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className={report.constraints.stabilityCompliance ? 'text-positive' : 'text-negative'} />
+                  <span>Rollover & CoG Safety</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className={report.constraints.physicalSupport ? 'text-positive' : 'text-negative'} />
+                  <span>Base Support Stability</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground">Left / Right:</span>
-              <span className="font-600 text-foreground">
-                {report.weightDistribution.left}% / {report.weightDistribution.right}%
-              </span>
-              <span
-                className={`ml-auto status-badge text-[9px] ${report.weightDistribution.isBalanced ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'}`}
-              >
-                {report.weightDistribution.isBalanced ? 'Balanced' : 'Unbalanced'}
-              </span>
-            </div>
-          </div>
+          )}
 
           {/* Recommendations */}
           <div>
-            <h3 className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-2">
-              Recommendations
+            <h3 className="text-xs font-700 text-muted-foreground uppercase tracking-wider mb-2">
+              Optimization Insights
             </h3>
             <div className="space-y-1.5">
               {report.recommendations.map((rec, i) => (
-                <div key={i} className="flex items-start gap-2 p-2.5 bg-muted/50 rounded-lg">
-                  <ChevronRight size={12} className="text-primary flex-shrink-0 mt-0.5" />
-                  <span className="text-xs text-foreground">{rec}</span>
+                <div key={i} className="flex items-start gap-2 p-2.5 bg-muted/40 rounded-lg border border-border text-xs">
+                  <ChevronRight size={13} className="text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-foreground leading-normal">{rec}</span>
                 </div>
               ))}
             </div>
@@ -196,16 +240,16 @@ export default function LoadingReportModal({
             <div className="flex gap-3 pt-2">
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-600 text-muted-foreground hover:bg-muted transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
               >
-                Continue Editing
+                Back to 3D Planner
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 py-2.5 rounded-xl gradient-primary text-sm font-600 text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl gradient-primary text-sm font-semibold text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
               >
-                <CheckCircle2 size={15} />
-                Confirm Loading
+                <CheckCircle2 size={16} />
+                Confirm & Save Manifest
               </button>
             </div>
           )}

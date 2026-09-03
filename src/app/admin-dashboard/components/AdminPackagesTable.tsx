@@ -1,22 +1,22 @@
 'use client';
 import React, { useState } from 'react';
-import { Search, Package, AlertTriangle } from 'lucide-react';
-import { MOCK_PACKAGES } from '@/lib/mockData';
+import { Search, Package as PackageIcon, AlertTriangle } from 'lucide-react';
+import { Package } from '@/lib/types';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 
 interface AdminPackagesTableProps {
-  packages?: typeof MOCK_PACKAGES;
+  packages?: Package[];
 }
 
-export default function AdminPackagesTable({ packages = MOCK_PACKAGES }: AdminPackagesTableProps) {
+export default function AdminPackagesTable({ packages = [] }: AdminPackagesTableProps) {
   const [search, setSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState<string>('ALL');
 
   const filtered = packages.filter((p) => {
     const matchSearch =
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.digitalId.toLowerCase().includes(search.toLowerCase());
+      (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||
+      (p.digitalId && p.digitalId.toLowerCase().includes(search.toLowerCase()));
     const matchRisk = riskFilter === 'ALL' || p.riskLevel === riskFilter;
     return matchSearch && matchRisk;
   });
@@ -58,7 +58,7 @@ export default function AdminPackagesTable({ packages = MOCK_PACKAGES }: AdminPa
       <div className="overflow-x-auto scrollbar-thin">
         {filtered.length === 0 ? (
           <EmptyState
-            icon={Package}
+            icon={PackageIcon}
             title="No packages found"
             description="No packages match your current filters."
             action={{

@@ -55,7 +55,15 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, status, currentUtilization, weightUtilization, currentShipmentId } = body;
+    const {
+      id,
+      status,
+      currentUtilization,
+      weightUtilization,
+      currentShipmentId,
+      assignedLoaderId,
+      assignedLoaderName,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Truck ID is required' }, { status: 400 });
@@ -66,6 +74,8 @@ export async function PATCH(request: Request) {
     if (currentUtilization !== undefined) updateData.current_utilization = parseFloat(currentUtilization);
     if (weightUtilization !== undefined) updateData.weight_utilization = parseFloat(weightUtilization);
     if (currentShipmentId !== undefined) updateData.current_shipment_id = currentShipmentId;
+    if (assignedLoaderId !== undefined) updateData.assigned_loader_id = assignedLoaderId;
+    if (assignedLoaderName !== undefined) updateData.assigned_loader_name = assignedLoaderName;
 
     const { data: updatedTruck, error } = await supabase
       .from('trucks')
