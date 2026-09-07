@@ -27,11 +27,11 @@ interface ParsedRow {
 }
 
 const SAMPLE_CSV = `name,length,width,height,weight,fragility,priority,destination,delivery_sequence,stacking_note
-Solar Inverter Unit,90,70,60,110,MEDIUM,HIGH,Pune Distribution Hub,1,Keep upright
-Laboratory Centrifuge,55,45,40,28,FRAGILE,URGENT,Nashik Depot,2,TOP TIER ONLY — FRAGILE
-Industrial Cable Spool,120,120,80,340,LOW,NORMAL,Mumbai Warehouse A,3,Floor placement only
-Biotech Reagents Cooler,50,40,35,16,HIGH,URGENT,Nagpur Central,4,Temperature sensitive
-Precision Lathe Chuck,75,65,50,85,LOW,NORMAL,Surat Express,5,Heavy steel component`;
+Solar Inverter Unit,90,70,60,110,MEDIUM,HIGH,Mumbai,1,Keep upright
+Laboratory Centrifuge,55,45,40,28,FRAGILE,URGENT,Delhi,2,TOP TIER ONLY — FRAGILE
+Industrial Cable Spool,120,120,80,340,LOW,NORMAL,Pune,3,Floor placement only
+Biotech Reagents Cooler,50,40,35,16,HIGH,URGENT,Chennai,4,Temperature sensitive
+Precision Lathe Chuck,75,65,50,85,LOW,NORMAL,Mumbai,5,Heavy steel component`;
 
 export default function ImportPackagesCsvModal({
   onClose,

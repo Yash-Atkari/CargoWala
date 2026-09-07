@@ -5,39 +5,63 @@ import { toast } from 'sonner';
 import { Package } from '@/lib/types';
 
 interface AddPackageModalProps {
+  packageToEdit?: Package | null;
   onClose: () => void;
-  onPackageAdded: (pkg: Package) => void;
+  onPackageAdded?: (pkg: Package) => void;
+  onPackageUpdated?: (pkg: Package) => void;
 }
 
-const COMMON_DESTINATIONS = [
-  'Pune Distribution Hub',
-  'Mumbai Warehouse A',
-  'Nashik Depot',
-  'Nagpur Central',
-  'Surat Express',
-  'Ahmedabad Logistics Park',
-  'Bengaluru Tech Park',
-  'Delhi NCR Depot',
-  'Chennai Port Yard',
-  'Hyderabad Central',
-];
+const COMMON_DESTINATIONS = ['Mumbai', 'Delhi', 'Pune', 'Chennai'];
 
-export default function AddPackageModal({ onClose, onPackageAdded }: AddPackageModalProps) {
+export default function AddPackageModal({
+  packageToEdit,
+  onClose,
+  onPackageAdded,
+  onPackageUpdated,
+}: AddPackageModalProps) {
+  const isEditMode = !!packageToEdit;
+
   const [digitalId, setDigitalId] = useState(
-    `CW-2026-PKG-${Math.floor(100 + Math.random() * 900)}`
+    packageToEdit?.digitalId || `CW-2026-PKG-${Math.floor(100 + Math.random() * 900)}`
   );
-  const [name, setName] = useState('');
-  const [length, setLength] = useState<string>('80');
-  const [width, setWidth] = useState<string>('60');
-  const [height, setHeight] = useState<string>('50');
-  const [weight, setWeight] = useState<string>('45');
-  const [fragilityLevel, setFragilityLevel] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'FRAGILE'>('LOW');
-  const [priority, setPriority] = useState<'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'>('NORMAL');
-  const [destination, setDestination] = useState(COMMON_DESTINATIONS[0]);
-  const [customDestination, setCustomDestination] = useState('');
-  const [deliverySequence, setDeliverySequence] = useState<number>(1);
-  const [stackingNote, setStackingNote] = useState('');
-  const [status, setStatus] = useState<'PENDING' | 'STAGED'>('PENDING');
+  const [name, setName] = useState(packageToEdit?.name || '');
+  const [length, setLength] = useState<string>(
+    packageToEdit?.length !== undefined ? String(packageToEdit.length) : '80'
+  );
+  const [width, setWidth] = useState<string>(
+    packageToEdit?.width !== undefined ? String(packageToEdit.width) : '60'
+  );
+  const [height, setHeight] = useState<string>(
+    packageToEdit?.height !== undefined ? String(packageToEdit.height) : '50'
+  );
+  const [weight, setWeight] = useState<string>(
+    packageToEdit?.weight !== undefined ? String(packageToEdit.weight) : '45'
+  );
+  const [fragilityLevel, setFragilityLevel] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'FRAGILE'>(
+    (packageToEdit?.fragilityLevel as any) || 'LOW'
+  );
+  const [priority, setPriority] = useState<'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'>(
+    (packageToEdit?.priority as any) || 'NORMAL'
+  );
+  const [destination, setDestination] = useState(() => {
+    if (!packageToEdit?.destination) return COMMON_DESTINATIONS[0];
+    return COMMON_DESTINATIONS.includes(packageToEdit.destination)
+      ? packageToEdit.destination
+      : 'CUSTOM';
+  });
+  const [customDestination, setCustomDestination] = useState(() => {
+    if (!packageToEdit?.destination) return '';
+    return COMMON_DESTINATIONS.includes(packageToEdit.destination)
+      ? ''
+      : packageToEdit.destination;
+  });
+  const [deliverySequence, setDeliverySequence] = useState<number>(
+    packageToEdit?.deliverySequence ?? 1
+  );
+  const [stackingNote, setStackingNote] = useState(packageToEdit?.stackingNote || '');
+  const [status, setStatus] = useState<'PENDING' | 'STAGED'>(
+    (packageToEdit?.status as any) || 'PENDING'
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -73,7 +97,7 @@ export default function AddPackageModal({ onClose, onPackageAdded }: AddPackageM
       setIsSubmitting(true);
       const finalDest = customDestination.trim() || destination;
 
-      const payload = {
+      const payload: any = {
         digitalId: digitalId.trim(),
         name: name.trim(),
         length: parseFloat(length),
@@ -88,23 +112,34 @@ export default function AddPackageModal({ onClose, onPackageAdded }: AddPackageM
         status,
       };
 
+      if (isEditMode && packageToEdit) {
+        payload.id = packageToEdit.id;
+      }
+
+      const method = isEditMode ? 'PATCH' : 'POST';
       const res = await fetch('/api/packages', {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create package');
+      if (!res.ok || (!data.success && !data.package)) {
+        throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'create'} package`);
       }
 
-      toast.success(`Package "${data.package.name}" added successfully!`);
-      onPackageAdded(data.package);
+      const returnedPkg = data.package;
+      if (isEditMode) {
+        toast.success(`Package "${returnedPkg?.name || name}" updated successfully!`);
+        onPackageUpdated?.(returnedPkg || { ...packageToEdit, ...payload });
+      } else {
+        toast.success(`Package "${returnedPkg?.name || name}" added successfully!`);
+        onPackageAdded?.(returnedPkg);
+      }
       onClose();
     } catch (err: any) {
-      console.error('Error adding package:', err);
-      toast.error(err.message || 'Network error while adding package');
+      console.error('Error submitting package form:', err);
+      toast.error(err.message || 'Network error while saving package');
     } finally {
       setIsSubmitting(false);
     }
@@ -120,9 +155,13 @@ export default function AddPackageModal({ onClose, onPackageAdded }: AddPackageM
               <Box size={18} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-foreground">Add New Package</h2>
+              <h2 className="text-base font-bold text-foreground">
+                {isEditMode ? 'Edit Package Specifications' : 'Add New Package'}
+              </h2>
               <p className="text-xs text-muted-foreground">
-                Enter package specifications, safety requirements & route details
+                {isEditMode
+                  ? 'Update package specifications, safety requirements & route details'
+                  : 'Enter package specifications, safety requirements & route details'}
               </p>
             </div>
           </div>
@@ -363,12 +402,12 @@ export default function AddPackageModal({ onClose, onPackageAdded }: AddPackageM
               {isSubmitting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Saving Package...</span>
+                  <span>{isEditMode ? 'Updating Package...' : 'Saving Package...'}</span>
                 </>
               ) : (
                 <>
                   <Check size={14} />
-                  <span>Add Package</span>
+                  <span>{isEditMode ? 'Save Changes' : 'Add Package'}</span>
                 </>
               )}
             </button>

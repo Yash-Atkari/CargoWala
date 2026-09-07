@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { LoadingReport } from '@/lib/loadingOptimizer';
-import { CheckCircle2, Package, Shield, ChevronRight, BarChart3, X, AlertTriangle, Sparkles, Gauge } from 'lucide-react';
+import { CheckCircle2, Package, Shield, ChevronRight, BarChart3, X, AlertTriangle, Sparkles, Gauge, RefreshCw } from 'lucide-react';
 
 interface LoadingReportModalProps {
   report: LoadingReport;
@@ -10,6 +10,7 @@ interface LoadingReportModalProps {
   onClose: () => void;
   onConfirm: () => void;
   isReadOnly?: boolean;
+  isSaving?: boolean;
 }
 
 function ScoreRing({ value, label, color }: { value: number; label: string; color: string }) {
@@ -49,6 +50,7 @@ export default function LoadingReportModal({
   onClose,
   onConfirm,
   isReadOnly = false,
+  isSaving = false,
 }: LoadingReportModalProps) {
   const effColor =
     report.loadingEfficiency >= 75
@@ -246,10 +248,20 @@ export default function LoadingReportModal({
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 py-2.5 rounded-xl gradient-primary text-sm font-semibold text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+                disabled={isSaving}
+                className="flex-1 py-2.5 rounded-xl gradient-primary text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
               >
-                <CheckCircle2 size={16} />
-                Confirm & Save Manifest
+                {isSaving ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Saving Manifest...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Confirm & Save Manifest
+                  </>
+                )}
               </button>
             </div>
           )}

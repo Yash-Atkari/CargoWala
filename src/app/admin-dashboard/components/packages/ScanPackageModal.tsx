@@ -12,16 +12,19 @@ import {
   ArrowRight,
   Package as PackageIcon,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Package } from '@/lib/types';
 import StatusBadge from '@/components/ui/StatusBadge';
+import DeleteConfirmModal from './DeleteConfirmModal';
 
 interface ScanPackageModalProps {
   existingPackages: Package[];
   onClose: () => void;
   onPackageRetrieved?: (pkg: Package) => void;
   onPackageAdded?: (pkg: Package) => void;
+  onPackageDeleted?: (packageId: string) => void;
 }
 
 interface ScanResult {
@@ -37,6 +40,7 @@ export default function ScanPackageModal({
   onClose,
   onPackageRetrieved,
   onPackageAdded,
+  onPackageDeleted,
 }: ScanPackageModalProps) {
   const [barcodeInput, setBarcodeInput] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -44,6 +48,7 @@ export default function ScanPackageModal({
   const [cameraActive, setCameraActive] = useState(false);
   const [scanHistory, setScanHistory] = useState<ScanResult[]>([]);
   const [activePackage, setActivePackage] = useState<Package | null>(null);
+  const [deletingPackage, setDeletingPackage] = useState<Package | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -182,6 +187,16 @@ export default function ScanPackageModal({
     handleProcessCode(sampleCode);
   };
 
+  const handleDeletePackage = (pkg: Package) => {
+    setDeletingPackage(pkg);
+  };
+
+  const handleRemoveHistoryItem = (index: number) => {
+    setScanHistory((prev) => prev.filter((_, idx) => idx !== index));
+    toast.info('Scan log entry removed');
+  };
+
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in">
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -307,9 +322,18 @@ export default function ScanPackageModal({
                     {activePackage.name}
                   </h4>
                 </div>
-                <span className="text-xs font-bold text-foreground bg-background px-2.5 py-1 rounded-lg border border-border">
-                  {activePackage.weight} kg
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-foreground bg-background px-2.5 py-1 rounded-lg border border-border">
+                    {activePackage.weight} kg
+                  </span>
+                  <button
+                    onClick={() => handleDeletePackage(activePackage)}
+                    className="p-1.5 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors border border-destructive/20"
+                    title="Delete wrong scanned package from system"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-[11px] bg-background/60 p-2 rounded-lg border border-border/50 text-muted-foreground">
@@ -360,9 +384,28 @@ export default function ScanPackageModal({
                         <p className="text-[11px] text-muted-foreground truncate">{item.message}</p>
                       </div>
                     </div>
-                    <span className="text-[10px] text-muted-foreground shrink-0 pl-2">
-                      {item.timestamp}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0 pl-2">
+                      <span className="text-[10px] text-muted-foreground">
+                        {item.timestamp}
+                      </span>
+                      {item.pkg ? (
+                        <button
+                          onClick={() => handleDeletePackage(item.pkg!)}
+                          className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Delete wrong scanned package from system"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRemoveHistoryItem(idx)}
+                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                          title="Remove scan log entry"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -383,6 +426,28 @@ export default function ScanPackageModal({
           </button>
         </div>
       </div>
+
+      {deletingPackage && (
+        <DeleteConfirmModal
+          packageToDelete={deletingPackage}
+          onClose={() => setDeletingPackage(null)}
+          onConfirmDelete={async (pkgId) => {
+            const res = await fetch(`/api/packages?id=${encodeURIComponent(pkgId)}`, {
+              method: 'DELETE',
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.error || 'Failed to delete package');
+            }
+            toast.success(`Package "${deletingPackage.name}" deleted from system`);
+            if (activePackage?.id === pkgId) {
+              setActivePackage(null);
+            }
+            onPackageDeleted?.(pkgId);
+            setScanHistory((prev) => prev.filter((item) => item.pkg?.id !== pkgId));
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -345,7 +345,7 @@ export default function AdminDispatchesView({
                         <div className="flex items-center justify-end gap-1.5">
                           {/* 3D Plan Visualizer Link */}
                           <Link
-                            href={`/load-planner`}
+                            href={`/load-planner?shipmentId=${s.id}${s.truckId ? `&truckId=${s.truckId}` : ''}`}
                             className="px-2.5 py-1 bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold rounded-lg transition-colors inline-flex items-center gap-1 border border-border"
                             title="Open 3D Load Planner"
                           >

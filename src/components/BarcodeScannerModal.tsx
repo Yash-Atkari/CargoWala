@@ -14,6 +14,7 @@ import {
   ArrowRight,
   ShieldAlert,
   Camera,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,6 +43,7 @@ export default function BarcodeScannerModal({
   const [manualCode, setManualCode] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [scanHistory, setScanHistory] = useState<ScanLogEntry[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [activeWarning, setActiveWarning] = useState<{
     pkg: LoadingPackage;
     reason: string;
@@ -73,90 +75,101 @@ export default function BarcodeScannerModal({
   };
 
   const processScan = async (scannedId: string) => {
+    if (isProcessing) return;
     const cleanId = scannedId.trim().toUpperCase();
     if (!cleanId) return;
 
-    // Find package by ID, digital ID, or name
-    const match = packages.find(
-      (p) =>
-        p.id.toUpperCase() === cleanId ||
-        p.digitalId.toUpperCase() === cleanId ||
-        p.name.toUpperCase().includes(cleanId)
-    );
+    setIsProcessing(true);
+    try {
+      // Find package by ID, digital ID, or name
+      const match = packages.find(
+        (p) =>
+          p.id.toUpperCase() === cleanId ||
+          p.digitalId.toUpperCase() === cleanId ||
+          p.name.toUpperCase().includes(cleanId)
+      );
 
-    const now = new Date().toLocaleTimeString();
+      const now = new Date().toLocaleTimeString();
 
-    if (!match) {
-      playBeep(false);
-      toast.error(`Unknown barcode / QR "${cleanId}" — package not in vehicle manifest.`);
-      setScanHistory((prev) => [
-        {
-          digitalId: cleanId,
-          packageName: 'Unknown Package',
-          expectedOrder: 0,
-          isOrderCompliant: false,
-          timestamp: now,
-          status: 'NOT_FOUND',
-        },
-        ...prev,
-      ]);
-      return;
+      if (!match) {
+        playBeep(false);
+        toast.error(`Unknown barcode / QR "${cleanId}" — package not in vehicle manifest.`);
+        setScanHistory((prev) => [
+          {
+            digitalId: cleanId,
+            packageName: 'Unknown Package',
+            expectedOrder: 0,
+            isOrderCompliant: false,
+            timestamp: now,
+            status: 'NOT_FOUND',
+          },
+          ...prev,
+        ]);
+        return;
+      }
+
+      if (match.isLoaded) {
+        playBeep(false);
+        toast.warning(`Package "${match.name}" (${match.digitalId}) is already marked as LOADED.`);
+        setScanHistory((prev) => [
+          {
+            digitalId: match.digitalId,
+            packageName: match.name,
+            expectedOrder: match.loadingOrder || 0,
+            isOrderCompliant: true,
+            timestamp: now,
+            status: 'ALREADY_LOADED',
+          },
+          ...prev,
+        ]);
+        return;
+      }
+
+      // Check loading order compliance
+      const isCompliant = !nextExpected || match.id === nextExpected.id;
+
+      if (!isCompliant) {
+        playBeep(false);
+        setActiveWarning({
+          pkg: match,
+          reason: `Loading Sequence Violation: Plan requires Step #${nextExpected?.loadingOrder} ("${nextExpected?.name}") before Step #${match.loadingOrder} ("${match.name}").`,
+        });
+        return;
+      }
+
+      // Execute verification
+      await executeVerifiedLoad(match, true);
+    } finally {
+      setIsProcessing(false);
     }
-
-    if (match.isLoaded) {
-      playBeep(false);
-      toast.warning(`Package "${match.name}" (${match.digitalId}) is already marked as LOADED.`);
-      setScanHistory((prev) => [
-        {
-          digitalId: match.digitalId,
-          packageName: match.name,
-          expectedOrder: match.loadingOrder || 0,
-          isOrderCompliant: true,
-          timestamp: now,
-          status: 'ALREADY_LOADED',
-        },
-        ...prev,
-      ]);
-      return;
-    }
-
-    // Check loading order compliance
-    const isCompliant = !nextExpected || match.id === nextExpected.id;
-
-    if (!isCompliant) {
-      playBeep(false);
-      setActiveWarning({
-        pkg: match,
-        reason: `Loading Sequence Violation: Plan requires Step #${nextExpected?.loadingOrder} ("${nextExpected?.name}") before Step #${match.loadingOrder} ("${match.name}").`,
-      });
-      return;
-    }
-
-    // Execute verification
-    await executeVerifiedLoad(match, true);
   };
 
   const executeVerifiedLoad = async (pkg: LoadingPackage, isCompliant: boolean) => {
-    const now = new Date().toLocaleTimeString();
-    const success = await onScanVerify(pkg.id);
+    setIsProcessing(true);
+    try {
+      const now = new Date().toLocaleTimeString();
+      const success = await onScanVerify(pkg.id);
 
-    if (success) {
-      playBeep(true);
-      toast.success(`Verified & Loaded "${pkg.name}" (${pkg.digitalId})!`);
-      setScanHistory((prev) => [
-        {
-          digitalId: pkg.digitalId,
-          packageName: pkg.name,
-          expectedOrder: pkg.loadingOrder || 0,
-          isOrderCompliant: isCompliant,
-          timestamp: now,
-          status: isCompliant ? 'SUCCESS' : 'OUT_OF_ORDER',
-        },
-        ...prev,
-      ]);
+      if (success) {
+        playBeep(true);
+        toast.success(`Verified & Loaded "${pkg.name}" (${pkg.digitalId})!`);
+        setScanHistory((prev) => [
+          {
+            digitalId: pkg.digitalId,
+            packageName: pkg.name,
+            expectedOrder: pkg.loadingOrder || 0,
+            isOrderCompliant: isCompliant,
+            timestamp: now,
+            status: isCompliant ? 'SUCCESS' : 'OUT_OF_ORDER',
+          },
+          ...prev,
+        ]);
+      }
+      setActiveWarning(null);
+      setManualCode('');
+    } finally {
+      setIsProcessing(false);
     }
-    setActiveWarning(null);
-    setManualCode('');
   };
 
   return (
@@ -219,16 +232,16 @@ export default function BarcodeScannerModal({
 
             {/* Next Expected Step Badge */}
             {nextExpected && (
-              <div className="absolute bottom-3 inset-x-4 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-2 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3 py-1.5 flex items-center gap-3 text-xs max-w-[85%] shadow-lg">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                     #{nextExpected.loadingOrder}
                   </span>
-                  <span className="text-white font-semibold truncate max-w-[150px]">
+                  <span className="text-white font-semibold truncate">
                     {nextExpected.name}
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <span className="text-[10px] text-slate-400 font-mono flex-shrink-0">
                   {nextExpected.digitalId}
                 </span>
               </div>
@@ -254,9 +267,17 @@ export default function BarcodeScannerModal({
                 </button>
                 <button
                   onClick={() => executeVerifiedLoad(activeWarning.pkg, false)}
-                  className="flex-1 py-1.5 rounded-lg bg-negative hover:bg-negative/90 text-xs font-bold text-white shadow-md shadow-negative/20"
+                  disabled={isProcessing}
+                  className="flex-1 py-1.5 rounded-lg bg-negative hover:bg-negative/90 text-xs font-bold text-white shadow-md shadow-negative/20 flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
-                  Override & Load Anyway
+                  {isProcessing ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin text-white" />
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    <span>Override & Load Anyway</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -273,35 +294,24 @@ export default function BarcodeScannerModal({
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
                 placeholder="e.g. CW-2026-PKG-001 or scan code..."
+                disabled={isProcessing}
                 onKeyDown={(e) => e.key === 'Enter' && processScan(manualCode)}
-                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-mono"
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-mono disabled:opacity-50"
               />
               <button
                 onClick={() => processScan(manualCode)}
-                disabled={!manualCode.trim()}
-                className="px-4 py-2 rounded-xl gradient-primary text-xs font-bold text-white hover:opacity-90 disabled:opacity-40 transition-opacity shadow-md shadow-primary/20"
+                disabled={!manualCode.trim() || isProcessing}
+                className="px-4 py-2 rounded-xl gradient-primary text-xs font-bold text-white hover:opacity-90 disabled:opacity-40 transition-opacity shadow-md shadow-primary/20 flex items-center justify-center gap-1.5 min-w-[80px]"
               >
-                Verify
+                {isProcessing ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin text-white" />
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <span>Verify</span>
+                )}
               </button>
-            </div>
-
-            {/* Quick Test Barcode Pills */}
-            <div className="pt-2">
-              <span className="text-[10px] text-slate-400 block mb-1">
-                Queue Shortcuts (Click to simulate scan):
-              </span>
-              <div className="flex gap-1.5 flex-wrap max-h-24 overflow-y-auto scrollbar-thin">
-                {unloadedSorted.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    onClick={() => processScan(pkg.digitalId)}
-                    className="text-[10px] px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono border border-slate-700 transition-colors flex items-center gap-1"
-                  >
-                    <span>#{pkg.loadingOrder}</span>
-                    <span>{pkg.digitalId.replace('CW-2026-', '')}</span>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 

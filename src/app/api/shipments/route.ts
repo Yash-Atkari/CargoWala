@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 
+export const dynamic = 'force-dynamic';
+
 function mapShipmentToCamel(s: any) {
   if (!s) return null;
   return {
@@ -20,8 +22,50 @@ function mapShipmentToCamel(s: any) {
   };
 }
 
+async function syncCompletedShipments() {
+  try {
+    const { data: activeShipments } = await supabase
+      .from('shipments')
+      .select('id, truck_id, status')
+      .neq('status', 'DELIVERED')
+      .neq('status', 'CANCELLED');
+
+    if (!activeShipments || activeShipments.length === 0) return;
+
+    for (const ship of activeShipments) {
+      const { data: pkgs } = await supabase
+        .from('packages')
+        .select('status')
+        .eq('shipment_id', ship.id);
+
+      if (pkgs && pkgs.length > 0) {
+        const allDelivered = pkgs.every(
+          (p) => p.status === 'DELIVERED' || p.status === 'CANCELLED'
+        );
+        if (allDelivered) {
+          await supabase.from('shipments').update({ status: 'DELIVERED' }).eq('id', ship.id);
+          if (ship.truck_id) {
+            await supabase
+              .from('trucks')
+              .update({
+                status: 'AVAILABLE',
+                current_shipment_id: null,
+                current_utilization: 0,
+                weight_utilization: 0,
+              })
+              .eq('id', ship.truck_id);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error auto-syncing completed shipments:', err);
+  }
+}
+
 export async function GET(request: Request) {
   try {
+    await syncCompletedShipments();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const loaderId = searchParams.get('loaderId');
@@ -42,18 +86,29 @@ export async function GET(request: Request) {
     }
 
     if (loaderId) {
+      if (all) {
+        const { data: shipments, error } = await supabase
+          .from('shipments')
+          .select('*')
+          .eq('loader_id', loaderId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return NextResponse.json((shipments || []).map(mapShipmentToCamel));
+      }
+
       const { data: shipments, error } = await supabase
         .from('shipments')
         .select('*')
         .eq('loader_id', loaderId)
-        .in('status', ['PLANNED', 'PENDING', 'LOADING', 'READY', 'LOADED', 'IN_TRANSIT'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (all) {
-        return NextResponse.json((shipments || []).map(mapShipmentToCamel));
-      }
-      return NextResponse.json(shipments && shipments.length > 0 ? mapShipmentToCamel(shipments[0]) : null);
+      // Prefer active shipment first
+      const activeShipment = shipments?.find((s) =>
+        ['PLANNED', 'PENDING', 'LOADING', 'READY', 'LOADED', 'IN_TRANSIT'].includes(s.status)
+      );
+      return NextResponse.json(mapShipmentToCamel(activeShipment || (shipments && shipments[0]) || null));
     }
 
     const { data: shipments, error } = await supabase

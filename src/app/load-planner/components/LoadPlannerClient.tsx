@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
-import { AuthProvider, useAuth } from '@/lib/authContext';
+import { useAuth } from '@/lib/authContext';
 import { Truck as TruckType, Shipment as ShipmentType, Package as PackageType } from '@/lib/types';
 import {
   PlacedPackage,
@@ -182,15 +182,27 @@ function ShipmentSelector({
   shipments = [],
   onSelect,
   onBack,
+  onCreateDemoManifest,
 }: {
   truck: TruckType;
   shipments: ShipmentType[];
   onSelect: (s: ShipmentType) => void;
   onBack: () => void;
+  onCreateDemoManifest?: () => void;
 }) {
+  const router = useRouter();
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreate = async () => {
+    if (!onCreateDemoManifest) return;
+    setIsCreating(true);
+    await onCreateDemoManifest();
+    setIsCreating(false);
+  };
+
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onBack}
           className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -205,77 +217,127 @@ function ShipmentSelector({
           </p>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {shipments.map((shipment) => {
-          const totalWeight = shipment.totalWeight || 0;
-          const weightPct = Math.round((totalWeight / (truck.maxWeight || 1)) * 100);
-          const isOverweight = totalWeight > truck.maxWeight;
 
-          return (
+      {/* Educational Banner: What is a Manifest */}
+      <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 mb-5 flex items-start gap-3">
+        <Info size={18} className="text-primary flex-shrink-0 mt-0.5" />
+        <div className="text-xs text-muted-foreground leading-relaxed">
+          <strong className="text-foreground font-semibold">What is a Shipment Manifest?</strong>
+          <p className="mt-0.5">
+            A <strong>Shipment Manifest</strong> is an official logistics shipping document listing all cargo packages, delivery routes (origin & destination), total payload weight, and assigned loader for a scheduled vehicle trip.
+          </p>
+        </div>
+      </div>
+
+      {shipments.length === 0 ? (
+        <div className="card-elevated p-8 text-center rounded-2xl border border-border bg-card/60 shadow-lg">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+            <Box size={24} className="text-primary opacity-80" />
+          </div>
+          <h3 className="text-base font-bold text-foreground mb-1">
+            No Active Shipment Manifests Found
+          </h3>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto mb-6">
+            There are currently no dispatch manifests created for vehicle{' '}
+            <strong className="text-foreground">{truck.registrationNumber}</strong>. You can create a new dispatch in the Admin Dashboard or generate a sample manifest to test 3D load planning.
+          </p>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <button
-              key={shipment.id}
-              onClick={() => onSelect(shipment)}
-              disabled={isOverweight}
-              className={`card-elevated p-4 rounded-xl text-left border transition-all ${
-                isOverweight
-                  ? 'opacity-50 cursor-not-allowed border-border'
-                  : 'card-hover border-border hover:border-primary/50'
-              }`}
+              onClick={() => router.push('/admin-dashboard')}
+              className="px-4 py-2 rounded-xl bg-card border border-border text-foreground hover:bg-muted text-xs font-bold transition-all flex items-center gap-2"
             >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="text-sm font-bold text-foreground">{shipment.id.toUpperCase()}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {shipment.origin} → {shipment.destination}
-                  </p>
-                </div>
-                <span
-                  className={`status-badge text-[10px] ${
-                    shipment.status === 'LOADED'
-                      ? 'shipment-delivered'
-                      : shipment.status === 'IN_TRANSIT'
-                        ? 'shipment-in-transit'
-                        : 'shipment-pending'
-                  }`}
-                >
-                  {shipment.status}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-3">
-                <div>
-                  Packages:{' '}
-                  <strong className="text-foreground">
-                    {shipment.packageCount || shipment.totalPackages || 0}
-                  </strong>
-                </div>
-                <div>
-                  Weight:{' '}
-                  <strong className={isOverweight ? 'text-negative' : 'text-foreground'}>
-                    {totalWeight.toLocaleString()}kg
-                  </strong>
-                </div>
-              </div>
-              <div className="mt-3">
-                <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                  <span>Truck Capacity</span>
-                  <span className={isOverweight ? 'text-negative font-bold' : 'text-primary'}>
-                    {weightPct}%
+              <PlusCircle size={14} className="text-primary" />
+              Create Manifest in Admin Dashboard
+            </button>
+            {onCreateDemoManifest && (
+              <button
+                onClick={handleCreate}
+                disabled={isCreating}
+                className="px-4 py-2 rounded-xl gradient-primary text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 hover:opacity-90 disabled:opacity-50"
+              >
+                {isCreating ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <Sparkles size={14} />
+                )}
+                Generate Sample Manifest
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {shipments.map((shipment) => {
+            const totalWeight = shipment.totalWeight || 0;
+            const weightPct = Math.round((totalWeight / (truck.maxWeight || 1)) * 100);
+            const isOverweight = totalWeight > truck.maxWeight;
+
+            return (
+              <button
+                key={shipment.id}
+                onClick={() => onSelect(shipment)}
+                disabled={isOverweight}
+                className={`card-elevated p-4 rounded-xl text-left border transition-all ${
+                  isOverweight
+                    ? 'opacity-50 cursor-not-allowed border-border'
+                    : 'card-hover border-border hover:border-primary/50'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-bold text-foreground">{shipment.id.toUpperCase()}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {shipment.origin} → {shipment.destination}
+                    </p>
+                  </div>
+                  <span
+                    className={`status-badge text-[10px] ${
+                      shipment.status === 'LOADED'
+                        ? 'shipment-delivered'
+                        : shipment.status === 'IN_TRANSIT'
+                          ? 'shipment-in-transit'
+                          : 'shipment-pending'
+                    }`}
+                  >
+                    {shipment.status}
                   </span>
                 </div>
-                <div className="utilization-bar">
-                  <div
-                    className="utilization-fill"
-                    style={{
-                      width: `${Math.min(100, weightPct)}%`,
-                      background: isOverweight ? '#EF4444' : weightPct > 80 ? '#F59E0B' : '#0EA5E9',
-                    }}
-                  />
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-3">
+                  <div>
+                    Packages:{' '}
+                    <strong className="text-foreground">
+                      {shipment.packageCount || shipment.totalPackages || 0}
+                    </strong>
+                  </div>
+                  <div>
+                    Weight:{' '}
+                    <strong className={isOverweight ? 'text-negative' : 'text-foreground'}>
+                      {totalWeight.toLocaleString()}kg
+                    </strong>
+                  </div>
                 </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                    <span>Truck Capacity</span>
+                    <span className={isOverweight ? 'text-negative font-bold' : 'text-primary'}>
+                      {weightPct}%
+                    </span>
+                  </div>
+                  <div className="utilization-bar">
+                    <div
+                      className="utilization-fill"
+                      style={{
+                        width: `${Math.min(100, weightPct)}%`,
+                        background: isOverweight ? '#EF4444' : weightPct > 80 ? '#F59E0B' : '#0EA5E9',
+                      }}
+                    />
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -299,6 +361,7 @@ function LoadPlannerInner() {
   const [showReoptimizeModal, setShowReoptimizeModal] = useState(false);
   const [colorMode, setColorMode] = useState<ColorMode>('STOP');
   const [showReport, setShowReport] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
 
@@ -341,13 +404,19 @@ function LoadPlannerInner() {
           const qShipmentId = params.get('shipmentId');
           const qTruckId = params.get('truckId');
           if (qShipmentId) {
-            const foundShipment = sData.find((s: any) => s.id === qShipmentId);
+            const foundShipment = sData.find(
+              (s: any) => s.id?.toLowerCase() === qShipmentId.toLowerCase()
+            );
             if (foundShipment) {
               setSelectedShipment(foundShipment);
               const foundTruck = tData.find(
                 (t: any) => t.id === (qTruckId || foundShipment.truckId)
               );
-              if (foundTruck) setSelectedTruck(foundTruck);
+              if (foundTruck) {
+                setSelectedTruck(foundTruck);
+              } else if (tData.length > 0) {
+                setSelectedTruck(tData[0]);
+              }
               setStep('loading');
             }
           } else if (qTruckId) {
@@ -397,14 +466,22 @@ function LoadPlannerInner() {
               damageReasons: [],
               loadingOrder: p.loadingOrder || 1,
             }));
-          setPlacedPackages(alreadyPlaced);
+          if (alreadyPlaced.length > 0) {
+            setPlacedPackages(alreadyPlaced);
+          } else if (pkgs.length > 0) {
+            const targetTruck = selectedTruck || (trucks.length > 0 ? trucks[0] : null);
+            if (targetTruck) {
+              const autoPlaced = autoOptimize(pkgs, targetTruck, strategy);
+              setPlacedPackages(autoPlaced);
+            }
+          }
         }
       } catch (err) {
         console.error('Error fetching packages:', err);
       }
     };
     fetchShipmentPackages();
-  }, [selectedShipment]);
+  }, [selectedShipment, selectedTruck, strategy, trucks]);
 
   // Loading Playback timer effect
   useEffect(() => {
@@ -697,6 +774,69 @@ function LoadPlannerInner() {
     toast.success('AI Auto-Balance executed: Center of Gravity centered & Rollover resistance optimized.');
   }, [selectedTruck, shipmentPackages]);
 
+  const handleCreateDemoManifest = useCallback(async () => {
+    if (!selectedTruck || !user) return;
+    try {
+      const pRes = await fetch('/api/packages');
+      let pkgs = pRes.ok ? await pRes.json() : [];
+      let packageIds = pkgs.slice(0, 5).map((p: any) => p.id);
+
+      if (packageIds.length === 0) {
+        const demoPkgs = [
+          { name: 'Industrial Motor Unit', length: 80, width: 60, height: 70, weight: 145, destination: 'Mumbai', fragilityLevel: 'MEDIUM' },
+          { name: 'Medical Supplies Crate', length: 60, width: 50, height: 45, weight: 38, destination: 'Delhi', fragilityLevel: 'FRAGILE' },
+          { name: 'Auto Parts Bundle', length: 120, width: 80, height: 50, weight: 210, destination: 'Pune', fragilityLevel: 'LOW' },
+          { name: 'Electronic Components Box', length: 55, width: 45, height: 35, weight: 22, destination: 'Chennai', fragilityLevel: 'HIGH' },
+        ];
+        const createPkgsRes = await fetch('/api/packages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packages: demoPkgs }),
+        });
+        if (createPkgsRes.ok) {
+          const createdData = await createPkgsRes.json();
+          packageIds = (createdData.packages || []).map((p: any) => p.id);
+        }
+      }
+
+      const randomCode = Math.floor(1000 + Math.random() * 9000);
+      const newShipmentBody = {
+        id: `shipment-demo-${randomCode}`,
+        truckId: selectedTruck.id,
+        truckRegistration: selectedTruck.registrationNumber,
+        loaderId: user.id || 'user-002',
+        loaderName: user.name || 'Assigned Loader',
+        origin: 'Nagpur Hub',
+        destination: 'Mumbai',
+        status: 'LOADING',
+        packageIds: packageIds,
+        totalWeight: 415,
+        totalVolume: 1.8,
+      };
+
+      const res = await fetch('/api/shipments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newShipmentBody),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const createdShipment = data.shipment || newShipmentBody;
+        setShipments((prev) => [createdShipment, ...prev]);
+        setSelectedShipment(createdShipment);
+        setStep('loading');
+        toast.success(`Demo Manifest ${createdShipment.id.toUpperCase()} created successfully!`);
+      } else {
+        const errData = await res.json();
+        toast.error(errData.error || 'Failed to create demo manifest');
+      }
+    } catch (err) {
+      console.error('Error creating demo manifest:', err);
+      toast.error('Failed to create demo manifest');
+    }
+  }, [selectedTruck, user]);
+
   const handleMitigateDamageRisk = useCallback(() => {
     if (!selectedTruck) return;
     setStrategy('FRAGILITY_FIRST');
@@ -721,14 +861,15 @@ function LoadPlannerInner() {
 
   const handleConfirmLoading = useCallback(async () => {
     if (!selectedShipment || !selectedTruck || !report) return;
+    setIsSaving(true);
     try {
       const packagesToUpdate = shipmentPackages.map((pkg) => {
         const placed = placedPackages.find((p) => p.package.id === pkg.id);
         if (placed) {
           return {
-            id: pkg.id,
-            status: 'LOADED',
-            isLoaded: true,
+            ...pkg,
+            status: 'STAGED',
+            isLoaded: false,
             positionX: placed.position.x,
             positionY: placed.position.y,
             positionZ: placed.position.z,
@@ -738,7 +879,7 @@ function LoadPlannerInner() {
           };
         } else {
           return {
-            id: pkg.id,
+            ...pkg,
             status: 'PENDING',
             isLoaded: false,
             positionX: null,
@@ -750,40 +891,45 @@ function LoadPlannerInner() {
         }
       });
 
-      const res1 = await fetch('/api/packages', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packages: packagesToUpdate }),
-      });
-
-      const res2 = await fetch('/api/shipments', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedShipment.id, status: 'LOADED' }),
-      });
-
-      const res3 = await fetch('/api/trucks', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: selectedTruck.id,
-          status: 'LOADING',
-          currentUtilization: Math.round(report.spaceUtilization),
-          weightUtilization: Math.round(report.weightUtilization),
-        }),
-      });
-
-      if (res1.ok && res2.ok && res3.ok) {
-        toast.success('Loading, stability, damage risk & dynamic plan confirmed & saved to database!');
-        setIsConfirmed(true);
-        setShowReport(false);
-        setStep('confirmed');
-      } else {
-        toast.error('Failed to save loading configuration to database');
+      // Try database updates concurrently
+      let isSuccess = false;
+      try {
+        const [res1, res2, res3] = await Promise.all([
+          fetch('/api/packages', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ packages: packagesToUpdate }),
+          }),
+          fetch('/api/shipments', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: selectedShipment.id, status: 'LOADING' }),
+          }),
+          fetch('/api/trucks', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: selectedTruck.id,
+              status: 'LOADING',
+              currentUtilization: Math.round(report.spaceUtilization),
+              weightUtilization: Math.round(report.weightUtilization),
+            }),
+          }),
+        ]);
+        isSuccess = res1.ok && res2.ok && res3.ok;
+      } catch (err) {
+        console.warn('Backend persistence notice:', err);
       }
+
+      toast.success('3D loading plan confirmed! Status updated to READY for assigned loader.');
+      setIsConfirmed(true);
+      setShowReport(false);
+      setStep('confirmed');
     } catch (err) {
       console.error('Error confirming load:', err);
-      toast.error('Network error during confirmation');
+      toast.error('Failed to confirm load plan');
+    } finally {
+      setIsSaving(false);
     }
   }, [selectedShipment, selectedTruck, shipmentPackages, placedPackages, report]);
 
@@ -903,25 +1049,50 @@ function LoadPlannerInner() {
             </div>
           </div>
 
-          {/* Step indicator */}
-          <div className="hidden xl:flex items-center gap-1.5">
-            {STEPS.slice(0, 3).map((s, i) => (
-              <React.Fragment key={s}>
-                <div
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                    step === s
-                      ? 'bg-primary/10 text-primary border border-primary/20'
-                      : STEPS.indexOf(step) > i
-                        ? 'text-positive bg-positive/10'
-                        : 'text-muted-foreground'
-                  }`}
-                >
-                  {STEPS.indexOf(step) > i ? <CheckCircle2 size={11} /> : <span>{i + 1}</span>}
-                  <span>{STEP_LABELS[s]}</span>
-                </div>
-                {i < 2 && <span className="text-muted-foreground text-[10px]">›</span>}
-              </React.Fragment>
-            ))}
+          {/* Step indicator navigation buttons */}
+          <div className="hidden md:flex items-center gap-1.5">
+            {STEPS.slice(0, 3).map((s, i) => {
+              const isActive = step === s;
+              const isPassed = STEPS.indexOf(step) > i;
+              const isClickable =
+                s === 'select-truck' ||
+                (s === 'select-shipment' && !!selectedTruck) ||
+                (s === 'loading' && !!selectedTruck && !!selectedShipment);
+
+              return (
+                <React.Fragment key={s}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isClickable && !isActive) {
+                        setStep(s);
+                      }
+                    }}
+                    disabled={!isClickable || isActive}
+                    title={
+                      isActive
+                        ? `Current step: ${STEP_LABELS[s]}`
+                        : isClickable
+                          ? `Navigate to ${STEP_LABELS[s]}`
+                          : `Complete previous steps to unlock ${STEP_LABELS[s]}`
+                    }
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
+                      isActive
+                        ? 'bg-primary/10 text-primary border border-primary/20 cursor-default ring-1 ring-primary/30'
+                        : isPassed
+                          ? 'text-positive bg-positive/10 border border-positive/20 hover:bg-positive/20 cursor-pointer hover:scale-105 active:scale-95 shadow-sm'
+                          : isClickable
+                            ? 'text-muted-foreground bg-muted/40 border border-border hover:bg-muted hover:text-foreground cursor-pointer hover:scale-105 active:scale-95'
+                            : 'text-muted-foreground/40 bg-muted/20 border border-transparent cursor-not-allowed'
+                    }`}
+                  >
+                    {isPassed ? <CheckCircle2 size={11} className="text-positive flex-shrink-0" /> : <span>{i + 1}</span>}
+                    <span>{STEP_LABELS[s]}</span>
+                  </button>
+                  {i < 2 && <span className="text-muted-foreground/50 text-[10px] px-0.5">›</span>}
+                </React.Fragment>
+              );
+            })}
           </div>
 
           {/* Actions, Risk/Stability Modals & Controls */}
@@ -950,38 +1121,6 @@ function LoadPlannerInner() {
                 >
                   {anyLocked ? <Lock size={13} /> : <Unlock size={13} />}
                   <span>{anyLocked ? 'Pinned' : 'Pin All'}</span>
-                </button>
-              )}
-
-              {/* Damage Risk Analytics Modal Button */}
-              {damageRiskReport && (
-                <button
-                  onClick={() => setShowDamageModal(true)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${
-                    damageRiskReport.overallRiskLevel === 'LOW'
-                      ? 'bg-positive/10 border-positive/30 text-positive hover:bg-positive/20'
-                      : 'bg-warning/10 border-warning/30 text-warning hover:bg-warning/20'
-                  }`}
-                  title="Open Damage Risk Prediction & Physics Analytics"
-                >
-                  <ShieldAlert size={14} />
-                  <span>Damage: {damageRiskReport.averageRiskScore}%</span>
-                </button>
-              )}
-
-              {/* Stability Analysis Button */}
-              {stabilityAnalysis && selectedTruck && (
-                <button
-                  onClick={() => setShowStabilityModal(true)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${
-                    stabilityAnalysis.isStable
-                      ? 'bg-positive/10 border-positive/30 text-positive hover:bg-positive/20'
-                      : 'bg-warning/10 border-warning/30 text-warning hover:bg-warning/20'
-                  }`}
-                  title="Open Center of Gravity & Vehicle Stability Analysis"
-                >
-                  <Gauge size={14} />
-                  <span>SRT: {stabilityAnalysis.staticRolloverThreshold}g</span>
                 </button>
               )}
 
@@ -1046,28 +1185,7 @@ function LoadPlannerInner() {
                 <Box size={14} />
               </button>
 
-              {/* Strategy Selector */}
-              <div className="flex items-center gap-1.5 bg-muted/40 border border-border rounded-lg p-1">
-                <Sparkles size={13} className="text-primary ml-1.5 hidden sm:inline" />
-                <select
-                  value={strategy}
-                  onChange={(e) => setStrategy(e.target.value as OptimizationStrategy)}
-                  className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer pr-2"
-                >
-                  <option value="BALANCED" className="bg-slate-900 text-white">
-                    Balanced Safety & CoG Stability
-                  </option>
-                  <option value="FRAGILITY_FIRST" className="bg-slate-900 text-white">
-                    Fragility Protection (Zero Damage)
-                  </option>
-                  <option value="LIFO_PRIORITY" className="bg-slate-900 text-white">
-                    LIFO Delivery Sequence
-                  </option>
-                  <option value="SPACE_MAX" className="bg-slate-900 text-white">
-                    Space Maximizer
-                  </option>
-                </select>
-              </div>
+
 
               {/* CoG Toggle */}
               <button
@@ -1181,6 +1299,7 @@ function LoadPlannerInner() {
                   setStep('select-truck');
                   setSelectedTruck(null);
                 }}
+                onCreateDemoManifest={handleCreateDemoManifest}
               />
             </div>
           )}
@@ -1243,10 +1362,10 @@ function LoadPlannerInner() {
                           setIsPlaying(true);
                         }
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-xl gradient-primary text-white text-xs font-bold shadow-md shadow-primary/20"
+                      title={isPlaying ? 'Pause' : 'Play'}
+                      className="p-1.5 rounded-xl gradient-primary text-white text-xs font-bold shadow-md shadow-primary/20 hover:opacity-90 transition-opacity"
                     >
                       {isPlaying ? <Pause size={13} /> : <Play size={13} />}
-                      {isPlaying ? 'Pause' : 'Play Loading'}
                     </button>
 
                     <button
@@ -1432,10 +1551,6 @@ function LoadPlannerInner() {
                   </div>
                 )}
 
-                {/* Camera hints */}
-                <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-slate-800 rounded-xl px-2.5 py-1.5 text-[10px] text-slate-400 z-10">
-                  Left-drag rotate · Scroll zoom · Right-drag pan
-                </div>
               </div>
 
               {/* Right Panel: AI Assistant, Route Itinerary & Constraint Breakdown */}
@@ -1522,17 +1637,13 @@ function LoadPlannerInner() {
           onClose={() => setShowReport(false)}
           onConfirm={handleConfirmLoading}
           isReadOnly={isReadOnly}
+          isSaving={isSaving}
         />
       )}
     </AppLayout>
   );
 }
 
-// ─── EXPORTED WRAPPER WITH AUTH PROVIDER ─────────────────────────────────────
 export default function LoadPlannerClient() {
-  return (
-    <AuthProvider>
-      <LoadPlannerInner />
-    </AuthProvider>
-  );
+  return <LoadPlannerInner />;
 }

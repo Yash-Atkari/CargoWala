@@ -13,43 +13,92 @@ import {
   AlertTriangle,
   Layers,
   ArrowUpDown,
+  Trash2,
+  Pencil,
+  Truck as TruckIcon,
 } from 'lucide-react';
-import { Package } from '@/lib/types';
+import { toast } from 'sonner';
+import { Package, Truck, Shipment } from '@/lib/types';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import AddPackageModal from './AddPackageModal';
 import ScanPackageModal from './ScanPackageModal';
 import ImportPackagesCsvModal from './ImportPackagesCsvModal';
+import DeleteConfirmModal from './DeleteConfirmModal';
 
 interface AdminPackagesViewProps {
   packages: Package[];
+  trucks?: Truck[];
+  shipments?: Shipment[];
   onPackagesUpdate: (updatedPackages: Package[]) => void;
   onRefresh?: () => void;
 }
 
 export default function AdminPackagesView({
   packages,
+  trucks = [],
+  shipments = [],
   onPackagesUpdate,
   onRefresh,
 }: AdminPackagesViewProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [fragilityFilter, setFragilityFilter] = useState('ALL');
-  const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [truckFilter, setTruckFilter] = useState('ALL');
   const [destinationFilter, setDestinationFilter] = useState('ALL');
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<Package | null>(null);
+  const [deletingPackage, setDeletingPackage] = useState<Package | null>(null);
 
-  // Extract unique destinations
+  // Map shipments & trucks for quick lookup
+  const shipmentMap = useMemo(() => {
+    const map = new Map<string, Shipment>();
+    shipments.forEach((s) => map.set(s.id, s));
+    return map;
+  }, [shipments]);
+
+  const truckMap = useMemo(() => {
+    const map = new Map<string, Truck>();
+    trucks.forEach((t) => {
+      map.set(t.id, t);
+      if (t.registrationNumber) map.set(t.registrationNumber, t);
+    });
+    return map;
+  }, [trucks]);
+
+  // Extract unique destinations based on packages matching active filters (truck, status, fragility)
   const uniqueDestinations = useMemo(() => {
     const dests = new Set<string>();
     packages.forEach((p) => {
-      if (p.destination) dests.add(p.destination);
+      const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
+      const matchesFragility = fragilityFilter === 'ALL' || p.fragilityLevel === fragilityFilter;
+
+      const pkgShipment = p.shipmentId ? shipmentMap.get(p.shipmentId) : undefined;
+      const pkgTruck = pkgShipment
+        ? (truckMap.get(pkgShipment.truckId) || truckMap.get(pkgShipment.truckRegistration))
+        : undefined;
+
+      const matchesTruck =
+        truckFilter === 'ALL' ||
+        (truckFilter === 'UNASSIGNED' && (!p.shipmentId || !pkgTruck)) ||
+        (pkgTruck && (pkgTruck.id === truckFilter || pkgTruck.registrationNumber === truckFilter));
+
+      if (matchesStatus && matchesFragility && matchesTruck && p.destination) {
+        dests.add(p.destination);
+      }
     });
     return Array.from(dests).sort();
-  }, [packages]);
+  }, [packages, statusFilter, fragilityFilter, truckFilter, shipmentMap, truckMap]);
+
+  // Reset destination filter if current selection is not in active unique destinations
+  React.useEffect(() => {
+    if (destinationFilter !== 'ALL' && !uniqueDestinations.includes(destinationFilter)) {
+      setDestinationFilter('ALL');
+    }
+  }, [uniqueDestinations, destinationFilter]);
 
   // Filtered packages
   const filtered = useMemo(() => {
@@ -64,12 +113,22 @@ export default function AdminPackagesView({
 
       const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
       const matchesFragility = fragilityFilter === 'ALL' || p.fragilityLevel === fragilityFilter;
-      const matchesPriority = priorityFilter === 'ALL' || p.priority === priorityFilter;
+      
+      const pkgShipment = p.shipmentId ? shipmentMap.get(p.shipmentId) : undefined;
+      const pkgTruck = pkgShipment
+        ? (truckMap.get(pkgShipment.truckId) || truckMap.get(pkgShipment.truckRegistration))
+        : undefined;
+
+      const matchesTruck =
+        truckFilter === 'ALL' ||
+        (truckFilter === 'UNASSIGNED' && (!p.shipmentId || !pkgTruck)) ||
+        (pkgTruck && (pkgTruck.id === truckFilter || pkgTruck.registrationNumber === truckFilter));
+
       const matchesDestination = destinationFilter === 'ALL' || p.destination === destinationFilter;
 
-      return matchesSearch && matchesStatus && matchesFragility && matchesPriority && matchesDestination;
+      return matchesSearch && matchesStatus && matchesFragility && matchesTruck && matchesDestination;
     });
-  }, [packages, search, statusFilter, fragilityFilter, priorityFilter, destinationFilter]);
+  }, [packages, search, statusFilter, fragilityFilter, truckFilter, destinationFilter, shipmentMap, truckMap]);
 
   // Package statistics
   const stats = useMemo(() => {
@@ -87,22 +146,32 @@ export default function AdminPackagesView({
     onPackagesUpdate([newPkg, ...packages]);
   };
 
+  const handlePackageUpdated = (updatedPkg: Package) => {
+    onPackagesUpdate(
+      packages.map((p) => (p.id === updatedPkg.id || p.digitalId === updatedPkg.digitalId ? updatedPkg : p))
+    );
+  };
+
   const handlePackagesImported = (imported: Package[]) => {
     onPackagesUpdate([...imported, ...packages]);
+  };
+
+  const handlePackageDeleted = (deletedId: string) => {
+    onPackagesUpdate(packages.filter((p) => p.id !== deletedId && p.digitalId !== deletedId));
   };
 
   const hasActiveFilters =
     search.trim() !== '' ||
     statusFilter !== 'ALL' ||
     fragilityFilter !== 'ALL' ||
-    priorityFilter !== 'ALL' ||
+    truckFilter !== 'ALL' ||
     destinationFilter !== 'ALL';
 
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
     setFragilityFilter('ALL');
-    setPriorityFilter('ALL');
+    setTruckFilter('ALL');
     setDestinationFilter('ALL');
   };
 
@@ -158,7 +227,7 @@ export default function AdminPackagesView({
       </div>
 
       {/* KPI Chips */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         <div className="p-2.5 bg-card border border-border rounded-xl">
           <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">
             Pending Staging
@@ -202,17 +271,6 @@ export default function AdminPackagesView({
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-lg font-bold text-negative">{stats.fragile}</span>
             <span className="text-[10px] text-muted-foreground">Top-tier safety</span>
-          </div>
-        </div>
-        <div className="p-2.5 bg-card border border-border rounded-xl">
-          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">
-            Total Cargo Mass
-          </span>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-bold text-foreground">
-              {(stats.totalWeightKg / 1000).toFixed(1)} <span className="text-xs font-normal">T</span>
-            </span>
-            <span className="text-[10px] text-muted-foreground">{stats.totalWeightKg.toLocaleString()} kg</span>
           </div>
         </div>
       </div>
@@ -271,17 +329,19 @@ export default function AdminPackagesView({
             <option value="FRAGILE">Fragile (Top Tier)</option>
           </select>
 
-          {/* Priority filter */}
+          {/* Truck filter */}
           <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-2.5 py-1.5 bg-muted border border-input rounded-lg text-xs font-medium text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
+            value={truckFilter}
+            onChange={(e) => setTruckFilter(e.target.value)}
+            className="px-2.5 py-1.5 bg-muted border border-input rounded-lg text-xs font-medium text-foreground focus:ring-1 focus:ring-primary focus:outline-none max-w-[170px] truncate"
           >
-            <option value="ALL">All Priorities</option>
-            <option value="LOW">Low</option>
-            <option value="NORMAL">Normal</option>
-            <option value="HIGH">High</option>
-            <option value="URGENT">Urgent</option>
+            <option value="ALL">All Trucks</option>
+            <option value="UNASSIGNED">Unassigned (No Truck)</option>
+            {trucks.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.registrationNumber} ({t.model})
+              </option>
+            ))}
           </select>
 
           {/* Destination filter */}
@@ -344,7 +404,7 @@ export default function AdminPackagesView({
                     Weight
                   </th>
                   <th className="px-3 py-2.5 font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">
-                    Fragility / Priority
+                    Fragility
                   </th>
                   <th className="px-3 py-2.5 font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">
                     Destination & Stop
@@ -353,13 +413,21 @@ export default function AdminPackagesView({
                     Risk Assessment
                   </th>
                   <th className="px-3 py-2.5 font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">
-                    Status / Dispatch
+                    Status / Assigned Truck
+                  </th>
+                  <th className="px-3 py-2.5 font-semibold text-muted-foreground uppercase tracking-wider text-[10px] text-right">
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((pkg) => {
                   const volM3 = (pkg.length * pkg.width * pkg.height) / 1000000;
+                  const pkgShipment = pkg.shipmentId ? shipmentMap.get(pkg.shipmentId) : undefined;
+                  const pkgTruck = pkgShipment
+                    ? (truckMap.get(pkgShipment.truckId) || truckMap.get(pkgShipment.truckRegistration))
+                    : undefined;
+
                   return (
                     <tr
                       key={pkg.id}
@@ -404,22 +472,9 @@ export default function AdminPackagesView({
                         <span className="text-[10px] text-muted-foreground">kg</span>
                       </td>
 
-                      {/* Fragility / Priority */}
+                      {/* Fragility */}
                       <td className="px-3 py-3 whitespace-nowrap">
-                        <div className="flex flex-col gap-1 items-start">
-                          <StatusBadge variant={pkg.fragilityLevel as any} size="sm" />
-                          <span
-                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
-                              pkg.priority === 'URGENT'
-                                ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                : pkg.priority === 'HIGH'
-                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                : 'bg-muted text-muted-foreground border-border'
-                            }`}
-                          >
-                            {pkg.priority}
-                          </span>
-                        </div>
+                        <StatusBadge variant={pkg.fragilityLevel as any} size="sm" />
                       </td>
 
                       {/* Destination & Stop */}
@@ -442,19 +497,57 @@ export default function AdminPackagesView({
                         </div>
                       </td>
 
-                      {/* Status / Dispatch */}
+                      {/* Status / Assigned Truck */}
                       <td className="px-3 py-3 whitespace-nowrap">
                         <div className="flex flex-col gap-1 items-start">
                           <StatusBadge variant={pkg.status as any} size="sm" />
-                          {pkg.shipmentId ? (
-                            <span className="font-mono text-[9px] text-primary hover:underline truncate max-w-[110px]">
-                              {pkg.shipmentId}
-                            </span>
+                          {pkgTruck ? (
+                            <div className="flex items-center gap-1.5 text-[10px] bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-md">
+                              <TruckIcon size={12} className="text-primary shrink-0" />
+                              <span className="font-semibold text-foreground font-mono">
+                                {pkgTruck.registrationNumber}
+                              </span>
+                              <span className="text-[9px] font-bold text-primary uppercase">
+                                ({pkgTruck.status})
+                              </span>
+                            </div>
+                          ) : pkgShipment ? (
+                            <div className="flex items-center gap-1 text-[10px]">
+                              <TruckIcon size={12} className="text-muted-foreground shrink-0" />
+                              <span className="font-mono text-muted-foreground">
+                                {pkgShipment.truckRegistration || pkg.shipmentId}
+                              </span>
+                              {pkgShipment.status && (
+                                <span className="text-[9px] text-muted-foreground italic">
+                                  ({pkgShipment.status})
+                                </span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-[9px] text-muted-foreground italic">
                               Unassigned
                             </span>
                           )}
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-3 py-3 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setEditingPackage(pkg)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            title={`Edit ${pkg.name}`}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingPackage(pkg)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            title={`Delete ${pkg.name}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -467,10 +560,33 @@ export default function AdminPackagesView({
       </div>
 
       {/* Modals */}
-      {showAddModal && (
+      {(showAddModal || editingPackage) && (
         <AddPackageModal
-          onClose={() => setShowAddModal(false)}
+          packageToEdit={editingPackage}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingPackage(null);
+          }}
           onPackageAdded={handlePackageAdded}
+          onPackageUpdated={handlePackageUpdated}
+        />
+      )}
+
+      {deletingPackage && (
+        <DeleteConfirmModal
+          packageToDelete={deletingPackage}
+          onClose={() => setDeletingPackage(null)}
+          onConfirmDelete={async (pkgId) => {
+            const res = await fetch(`/api/packages?id=${encodeURIComponent(pkgId)}`, {
+              method: 'DELETE',
+            });
+            if (!res.ok) {
+              const d = await res.json();
+              throw new Error(d.error || 'Failed to delete package');
+            }
+            toast.success(`Package "${deletingPackage.name}" deleted from system`);
+            handlePackageDeleted(pkgId);
+          }}
         />
       )}
 
@@ -479,6 +595,7 @@ export default function AdminPackagesView({
           existingPackages={packages}
           onClose={() => setShowScanModal(false)}
           onPackageAdded={handlePackageAdded}
+          onPackageDeleted={handlePackageDeleted}
           onPackageRetrieved={(pkg) => {
             setSearch(pkg.digitalId || pkg.id);
           }}

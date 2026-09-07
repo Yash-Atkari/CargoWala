@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { MOCK_TRUCKS } from '@/lib/mockData';
 
+export const dynamic = 'force-dynamic';
+
 function mapTruckToCamel(t: any) {
   if (!t) return null;
   return {
@@ -21,8 +23,44 @@ function mapTruckToCamel(t: any) {
   };
 }
 
+async function syncCompletedTrucks() {
+  try {
+    const { data: nonAvailable } = await supabase
+      .from('trucks')
+      .select('id, current_shipment_id, status')
+      .neq('status', 'AVAILABLE');
+
+    if (!nonAvailable || nonAvailable.length === 0) return;
+
+    for (const truck of nonAvailable) {
+      if (truck.current_shipment_id) {
+        const { data: ship } = await supabase
+          .from('shipments')
+          .select('status')
+          .eq('id', truck.current_shipment_id)
+          .maybeSingle();
+
+        if (!ship || ship.status === 'DELIVERED' || ship.status === 'COMPLETED') {
+          await supabase
+            .from('trucks')
+            .update({
+              status: 'AVAILABLE',
+              current_shipment_id: null,
+              current_utilization: 0,
+              weight_utilization: 0,
+            })
+            .eq('id', truck.id);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error syncing completed trucks:', err);
+  }
+}
+
 export async function GET(request: Request) {
   try {
+    await syncCompletedTrucks();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

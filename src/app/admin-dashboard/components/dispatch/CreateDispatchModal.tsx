@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   X,
   ArrowRight,
@@ -40,16 +40,66 @@ type WizardStep =
   | 'GENERATE_PLAN'
   | 'REVIEW_PLAN';
 
-const ORIGIN_HUBS = [
-  'Mumbai Central Fulfillment Hub A',
-  'Delhi NCR Logistics Depot',
-  'Bengaluru Tech Logistics Hub',
-  'Chennai Port Terminal',
-  'Pune Express Cargo Facility',
-  'Ahmedabad Logistics Park',
-  'Jaipur Regional Depot',
-  'Kolkata Dockyard Station',
-];
+const ORIGIN_HUBS = ['Nagpur Hub'];
+const PRIMARY_DESTINATIONS = ['Mumbai', 'Delhi', 'Pune', 'Chennai'];
+
+export interface RouteStop {
+  city: string;
+  stopSequence: number;
+}
+
+export const ROUTE_DEFINITIONS: Record<string, RouteStop[]> = {
+  Mumbai: [
+    { city: 'Amravati', stopSequence: 1 },
+    { city: 'Akola', stopSequence: 2 },
+    { city: 'Jalgaon', stopSequence: 3 },
+    { city: 'Nashik', stopSequence: 4 },
+    { city: 'Mumbai', stopSequence: 5 },
+  ],
+  Delhi: [
+    { city: 'Chhindwara', stopSequence: 1 },
+    { city: 'Jabalpur', stopSequence: 2 },
+    { city: 'Gwalior', stopSequence: 3 },
+    { city: 'Agra', stopSequence: 4 },
+    { city: 'Delhi', stopSequence: 5 },
+  ],
+  Pune: [
+    { city: 'Wardha', stopSequence: 1 },
+    { city: 'Yavatmal', stopSequence: 2 },
+    { city: 'Nanded', stopSequence: 3 },
+    { city: 'Ahmednagar', stopSequence: 4 },
+    { city: 'Pune', stopSequence: 5 },
+  ],
+  Chennai: [
+    { city: 'Chandrapur', stopSequence: 1 },
+    { city: 'Adilabad', stopSequence: 2 },
+    { city: 'Hyderabad', stopSequence: 3 },
+    { city: 'Vijayawada', stopSequence: 4 },
+    { city: 'Chennai', stopSequence: 5 },
+  ],
+};
+
+export function matchPackageToRoute(pkgDestination: string, routeTarget: string): { matches: boolean; stopSequence: number; matchedCity?: string } {
+  if (!routeTarget || !ROUTE_DEFINITIONS[routeTarget]) {
+    return { matches: false, stopSequence: 1 };
+  }
+
+  const routeStops = ROUTE_DEFINITIONS[routeTarget];
+  const cleanDest = (pkgDestination || '').toLowerCase().trim();
+
+  for (const stop of routeStops) {
+    const cleanCity = stop.city.toLowerCase();
+    if (cleanDest.includes(cleanCity) || cleanCity.includes(cleanDest)) {
+      return { matches: true, stopSequence: stop.stopSequence, matchedCity: stop.city };
+    }
+  }
+
+  if (cleanDest.includes(routeTarget.toLowerCase())) {
+    return { matches: true, stopSequence: routeStops[routeStops.length - 1].stopSequence, matchedCity: routeTarget };
+  }
+
+  return { matches: false, stopSequence: 1 };
+}
 
 export default function CreateDispatchModal({
   trucks,
@@ -66,7 +116,7 @@ export default function CreateDispatchModal({
   );
   const [origin, setOrigin] = useState(ORIGIN_HUBS[0]);
   const [customOrigin, setCustomOrigin] = useState('');
-  const [destination, setDestination] = useState('Pune Distribution Hub');
+  const [destination, setDestination] = useState(PRIMARY_DESTINATIONS[0]);
   const [customDestination, setCustomDestination] = useState('');
   const [departureTime, setDepartureTime] = useState(
     new Date(Date.now() + 3600000 * 3).toISOString().slice(0, 16)
@@ -197,6 +247,37 @@ export default function CreateDispatchModal({
   const handleClearSelectedPackages = () => {
     setSelectedPackageIds([]);
   };
+
+  // Auto-select packages matching the selected origin/destination route
+  const handleAutoSelectRoutePackages = useCallback(() => {
+    const matchedIds: string[] = [];
+    const newSequences: Record<string, number> = {};
+
+    availablePackages.forEach((pkg) => {
+      const match = matchPackageToRoute(pkg.destination, destination);
+      if (match.matches) {
+        matchedIds.push(pkg.id);
+        newSequences[pkg.id] = match.stopSequence;
+      }
+    });
+
+    if (matchedIds.length > 0) {
+      setSelectedPackageIds(matchedIds);
+      setPackageSequences((prev) => ({ ...prev, ...newSequences }));
+      toast.success(
+        `Auto-selected ${matchedIds.length} package(s) matching the Nagpur → ${destination} route!`
+      );
+    } else {
+      toast.info(`No unassigned packages currently match the Nagpur → ${destination} route stops.`);
+    }
+  }, [availablePackages, destination]);
+
+  // Auto-trigger route package selection when Step 2 opens
+  useEffect(() => {
+    if (currentStep === 'SELECT_PACKAGES') {
+      handleAutoSelectRoutePackages();
+    }
+  }, [currentStep, handleAutoSelectRoutePackages]);
 
   // Step 5: Trigger AI Loading Optimizer
   const handleGenerateLoadingPlan = async () => {
@@ -462,10 +543,7 @@ export default function CreateDispatchModal({
                 </label>
                 <select
                   value={origin}
-                  onChange={(e) => {
-                    setOrigin(e.target.value);
-                    setCustomOrigin('');
-                  }}
+                  onChange={(e) => setOrigin(e.target.value)}
                   className="w-full px-3 py-2 bg-muted border border-input rounded-lg text-xs font-medium text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
                 >
                   {ORIGIN_HUBS.map((h) => (
@@ -473,18 +551,7 @@ export default function CreateDispatchModal({
                       {h}
                     </option>
                   ))}
-                  <option value="CUSTOM">Custom Origin Hub...</option>
                 </select>
-                {origin === 'CUSTOM' && (
-                  <input
-                    type="text"
-                    value={customOrigin}
-                    onChange={(e) => setCustomOrigin(e.target.value)}
-                    placeholder="Enter custom warehouse origin name"
-                    className="w-full mt-2 px-3 py-1.5 bg-background border border-input rounded-lg text-xs text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
-                    autoFocus
-                  />
-                )}
               </div>
 
               {/* Destination Selection */}
@@ -492,13 +559,17 @@ export default function CreateDispatchModal({
                 <label className="block text-xs font-semibold text-foreground mb-1">
                   Primary Destination / Route Target
                 </label>
-                <input
-                  type="text"
+                <select
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
-                  placeholder="e.g. Pune Distribution Hub, Surat Express Waypoint"
                   className="w-full px-3 py-2 bg-muted border border-input rounded-lg text-xs font-medium text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
-                />
+                >
+                  {PRIMARY_DESTINATIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   Multi-stop delivery sequences can be adjusted in the package manifest selection step.
                 </p>
@@ -509,13 +580,41 @@ export default function CreateDispatchModal({
           {/* STEP 2: SELECT PACKAGES */}
           {currentStep === 'SELECT_PACKAGES' && (
             <div className="space-y-3 animate-in fade-in">
+              {/* Route Summary & Auto-Filter Banner */}
+              <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                    <span className="text-xs font-bold text-foreground">
+                      Active Route Target: Nagpur Hub ➔ {destination}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAutoSelectRoutePackages}
+                    className="px-2.5 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1 shadow-sm"
+                  >
+                    <Sparkles size={12} />
+                    <span>Auto-Select Route Packages</span>
+                  </button>
+                </div>
+                {ROUTE_DEFINITIONS[destination] && (
+                  <p className="text-[11px] text-muted-foreground font-mono">
+                    Highway Route Stops:{' '}
+                    {ROUTE_DEFINITIONS[destination]
+                      .map((s) => `${s.city} (Stop #${s.stopSequence})`)
+                      .join(' ➔ ')}
+                  </p>
+                )}
+              </div>
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-muted/30 border border-border rounded-xl">
                 <div>
                   <h3 className="text-xs font-bold text-foreground">
                     2. Select Cargo Packages ({selectedPackageIds.length} Selected)
                   </h3>
                   <p className="text-[11px] text-muted-foreground">
-                    Only packages without an active dispatch assignment are shown.
+                    Packages matching the route are automatically pre-selected & sequenced.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -599,6 +698,7 @@ export default function CreateDispatchModal({
                     <tbody className="divide-y divide-border">
                       {availablePackages.map((pkg) => {
                         const isSelected = selectedPackageIds.includes(pkg.id);
+                        const routeMatch = matchPackageToRoute(pkg.destination, destination);
                         return (
                           <tr
                             key={pkg.id}
@@ -616,7 +716,14 @@ export default function CreateDispatchModal({
                               />
                             </td>
                             <td className="p-2 font-semibold text-foreground">
-                              {pkg.name}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span>{pkg.name}</span>
+                                {routeMatch.matches && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    Stop #{routeMatch.stopSequence}
+                                  </span>
+                                )}
+                              </div>
                               <span className="block font-mono text-[10px] text-muted-foreground">
                                 {pkg.digitalId}
                               </span>
@@ -636,7 +743,7 @@ export default function CreateDispatchModal({
                                 type="number"
                                 min="1"
                                 max="20"
-                                value={packageSequences[pkg.id] ?? pkg.deliverySequence ?? 1}
+                                value={packageSequences[pkg.id] ?? (routeMatch.matches ? routeMatch.stopSequence : pkg.deliverySequence || 1)}
                                 onChange={(e) => {
                                   const val = parseInt(e.target.value, 10) || 1;
                                   setPackageSequences((prev) => ({ ...prev, [pkg.id]: val }));

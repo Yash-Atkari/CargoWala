@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/lib/authContext';
+import { useAuth } from '@/lib/authContext';
 import { Lock, Mail, ArrowRight, Loader2, Sparkles, Shield, UserCheck, KeyRound } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
@@ -264,9 +264,5 @@ function LoginScreenInner() {
 }
 
 export default function LoginScreenPage() {
-  return (
-    <AuthProvider>
-      <LoginScreenInner />
-    </AuthProvider>
-  );
+  return <LoginScreenInner />;
 }

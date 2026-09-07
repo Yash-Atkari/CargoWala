@@ -1,12 +1,11 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/lib/authContext';
+import { useAuth } from '@/lib/authContext';
 import AppLayout from '@/components/AppLayout';
 import AdminMetricsBento from './AdminMetricsBento';
 import AdminChartsRow from './AdminChartsRow';
 import AdminTrucksTable from './AdminTrucksTable';
-import AdminPackagesTable from './AdminPackagesTable';
 import AdminShipmentsTable from './AdminShipmentsTable';
 import AdminPackagesView from './packages/AdminPackagesView';
 import AdminDispatchesView from './dispatch/AdminDispatchesView';
@@ -30,7 +29,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-type AdminTab = 'DASHBOARD' | 'PACKAGES' | 'DISPATCHES' | 'VEHICLES' | 'LOADERS' | 'LOGISTICS';
+type AdminTab = 'DASHBOARD' | 'PACKAGES' | 'DISPATCHES' | 'VEHICLES' | 'LOADERS' | 'SHIPMENTS';
 
 function AdminDashboardInner() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -76,7 +75,16 @@ function AdminDashboardInner() {
     const pendingPackages = packages.filter((p) => p.status === 'PENDING').length;
     const plannedDispatches = shipments.filter((s) => s.status === 'PLANNED').length;
     const vehiclesAvailable = trucks.filter((t) => t.status === 'AVAILABLE').length;
-    const vehiclesLoading = trucks.filter((t) => t.status === 'LOADING').length;
+    const vehiclesLoading = trucks.filter((t) => {
+      if (t.status !== 'LOADING') return false;
+      if (t.currentShipmentId) {
+        const matchingShip = shipments.find((s) => s.id === t.currentShipmentId);
+        if (matchingShip && (matchingShip.status === 'IN_TRANSIT' || matchingShip.status === 'LOADED' || matchingShip.status === 'READY')) {
+          return false;
+        }
+      }
+      return true;
+    }).length;
     const dispatchesReady = shipments.filter(
       (s) => s.status === 'READY' || s.status === 'LOADED'
     ).length;
@@ -165,7 +173,7 @@ function AdminDashboardInner() {
     { key: 'DISPATCHES', label: 'Dispatches', icon: Ship, badge: operationalMetrics.plannedDispatches },
     { key: 'VEHICLES', label: 'Vehicles', icon: TruckIcon, badge: operationalMetrics.vehiclesAvailable },
     { key: 'LOADERS', label: 'Loaders', icon: Users },
-    { key: 'LOGISTICS', label: 'Logistics', icon: Compass },
+    { key: 'SHIPMENTS', label: 'Shipments', icon: Compass },
   ];
 
   return (
@@ -248,7 +256,7 @@ function AdminDashboardInner() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {/* 1. Pending packages */}
                 <button
                   onClick={() => setActiveTab('PACKAGES')}
@@ -318,24 +326,6 @@ function AdminDashboardInner() {
                   </div>
                   <span className="text-[10px] text-muted-foreground">Staged & Inspected ›</span>
                 </button>
-
-                {/* 6. Loading progress */}
-                <div className="p-3 bg-muted/40 border border-border rounded-xl flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">
-                      Loading Progress
-                    </span>
-                    <div className="text-xl font-bold text-foreground mt-1">
-                      {operationalMetrics.loadingProgressPct}%
-                    </div>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden mt-1.5">
-                    <div
-                      className="bg-primary h-full rounded-full transition-all"
-                      style={{ width: `${operationalMetrics.loadingProgressPct}%` }}
-                    />
-                  </div>
-                </div>
               </div>
 
               {/* 7. Recently Dispatched Vehicles */}
@@ -374,15 +364,6 @@ function AdminDashboardInner() {
 
             {/* Existing Charts Row */}
             <AdminChartsRow trucks={trucks} shipments={shipments} />
-
-            {/* Existing Fleet Trucks Table */}
-            <AdminTrucksTable trucks={trucks} />
-
-            {/* Existing Shipments & Packages Table Split */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <AdminShipmentsTable shipments={shipments} />
-              <AdminPackagesTable packages={packages} />
-            </div>
           </div>
         )}
 
@@ -390,6 +371,8 @@ function AdminDashboardInner() {
         {activeTab === 'PACKAGES' && (
           <AdminPackagesView
             packages={packages}
+            trucks={trucks}
+            shipments={shipments}
             onPackagesUpdate={(updated) => setPackages(updated)}
             onRefresh={fetchDashboardData}
           />
@@ -491,12 +474,12 @@ function AdminDashboardInner() {
           </div>
         )}
 
-        {/* TAB 6: LOGISTICS */}
-        {activeTab === 'LOGISTICS' && (
+        {/* TAB 6: SHIPMENTS */}
+        {activeTab === 'SHIPMENTS' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between bg-card p-4 rounded-xl border border-border">
               <div>
-                <h2 className="text-lg font-bold text-foreground">Logistics & Route Fulfillment</h2>
+                <h2 className="text-lg font-bold text-foreground">Shipments</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Multi-hub transfer corridors, live transit checkpoints, and arrival schedules
                 </p>
@@ -526,9 +509,5 @@ function AdminDashboardInner() {
 }
 
 export default function AdminDashboardClient() {
-  return (
-    <AuthProvider>
-      <AdminDashboardInner />
-    </AuthProvider>
-  );
+  return <AdminDashboardInner />;
 }

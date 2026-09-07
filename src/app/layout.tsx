@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Roboto } from 'next/font/google';
 import '../styles/tailwind.css';
+import { AuthProvider } from '@/lib/authContext';
 
 const roboto = Roboto({
   weight: ['300', '400', '500', '700', '900'],
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={roboto.variable}>
       <body className="font-sans antialiased">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
 
         <script
           type="module"

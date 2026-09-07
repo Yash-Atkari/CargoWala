@@ -10,7 +10,6 @@ import {
   Users,
   MapPin,
   BarChart3,
-  Bell,
   Settings,
   LogOut,
   ChevronLeft,
@@ -26,8 +25,6 @@ import AppLogo from './ui/AppLogo';
 import { useAuth } from '@/lib/authContext';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import AlertsNotificationModal from './AlertsNotificationModal';
-import { generateLiveExceptions, LogisticsAlert } from '@/lib/alertsEngine';
 
 interface NavItem {
   label: string;
@@ -40,15 +37,11 @@ interface NavItem {
 const ADMIN_NAV: NavItem[] = [
   { label: 'Admin Dashboard', href: '/admin-dashboard', icon: LayoutDashboard, group: 'Management' },
   { label: '3D Load Planner', href: '/load-planner', icon: Box, group: 'Operations' },
-  { label: '3D Digital Twin', href: '/digital-twin', icon: Sparkles, group: 'Operations' },
   { label: 'Driver Route Hub', href: '/driver-dashboard', icon: Navigation, group: 'Operations' },
-  { label: 'Loader Bay Station', href: '/loader-dashboard', icon: QrCode, group: 'Operations' },
 ];
 
 const LOADER_NAV: NavItem[] = [
   { label: 'Loader Bay Station', href: '/loader-dashboard', icon: QrCode, group: 'Operations' },
-  { label: '3D Load Planner', href: '/load-planner', icon: Box, group: 'Operations' },
-  { label: '3D Digital Twin', href: '/digital-twin', icon: Sparkles, group: 'Operations' },
   { label: 'Driver Route Hub', href: '/driver-dashboard', icon: Navigation, group: 'Operations' },
 ];
 
@@ -74,8 +67,6 @@ export default function Sidebar({
   const pathname = usePathname();
   const { logout } = useAuth();
   const router = useRouter();
-  const [showAlertsModal, setShowAlertsModal] = useState(false);
-  const [alerts, setAlerts] = useState<LogisticsAlert[]>([]);
 
   const navItems = role === 'ADMIN' ? ADMIN_NAV : LOADER_NAV;
   const groups = Array.from(new Set(navItems.map((i) => i.group)));
@@ -144,14 +135,6 @@ export default function Sidebar({
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               {role === 'ADMIN' ? 'Fleet Administrator' : 'Loading Station'}
             </span>
-            <button
-              onClick={() => setShowAlertsModal(true)}
-              className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors relative"
-              title="Open Exception & Alerts Center (Feature 11)"
-            >
-              <Bell size={13} />
-              <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            </button>
           </div>
         )}
 
@@ -229,41 +212,6 @@ export default function Sidebar({
           </div>
         </div>
       </aside>
-
-      {/* Alerts & Exception Management Modal */}
-      {showAlertsModal && (
-        <AlertsNotificationModal
-          alerts={[
-            {
-              id: 'a1',
-              severity: 'CRITICAL',
-              category: 'INSTABILITY',
-              title: 'Rollover SRT Warning',
-              message: 'Static Rollover Threshold is at 0.38g. Ensure heavy containers remain on floor level (Y=0).',
-              truckReg: 'MH-12-AB-4521',
-              timestamp: '3:15 PM',
-            },
-            {
-              id: 'a2',
-              severity: 'WARNING',
-              category: 'ROUTE_BLOCKAGE',
-              title: 'LIFO Route Extraction Check',
-              message: 'Verify Stop #1 parcels are staged within 150cm of rear loading doors.',
-              truckReg: 'MH-12-AB-4521',
-              timestamp: '3:10 PM',
-            },
-            {
-              id: 'a3',
-              severity: 'INFO',
-              category: 'LOADING_VIOLATION',
-              title: '3D AI Optimizer Active',
-              message: 'Multi-constraint bin packing and route sequencing engine running.',
-              timestamp: '3:05 PM',
-            },
-          ]}
-          onClose={() => setShowAlertsModal(false)}
-        />
-      )}
     </>
   );
 }

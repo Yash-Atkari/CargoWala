@@ -49,13 +49,13 @@ export default function LoaderCompletionModal({
     try {
       setIsSubmitting(true);
 
-      // 1. Update shipment status to READY
+      // 1. Update shipment status to IN_TRANSIT
       const res = await fetch('/api/shipments', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: currentShipment.id,
-          status: 'READY',
+          status: 'IN_TRANSIT',
         }),
       });
 
@@ -64,21 +64,31 @@ export default function LoaderCompletionModal({
         throw new Error(data.error || 'Failed to update shipment status');
       }
 
-      // 2. Audit tracking event
+      // 2. Update truck status to IN_TRANSIT
+      await fetch('/api/trucks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: assignedTruck.id,
+          status: 'IN_TRANSIT',
+        }),
+      });
+
+      // 3. Audit tracking event
       await fetch('/api/tracking-events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shipmentId: currentShipment.id,
-          eventType: 'LOADED',
-          description: `Loading session completed by bay operator. ${loadedCount} packages loaded, ${damagedCount} exceptions. Vehicle ${assignedTruck.registrationNumber} marked READY for highway dispatch.`,
+          eventType: 'IN_TRANSIT',
+          description: `Loading session completed by bay operator. ${loadedCount} packages loaded, ${damagedCount} exceptions. Vehicle ${assignedTruck.registrationNumber} departed and is now IN_TRANSIT on the highway.`,
           location: currentShipment.origin,
           createdBy: 'Bay Loading Operator',
         }),
       });
 
       toast.success(
-        `Dispatch ${currentShipment.id} is now READY! Vehicle ${assignedTruck.registrationNumber} ready for dispatch.`
+        `Dispatch ${currentShipment.id} is now IN_TRANSIT! Vehicle ${assignedTruck.registrationNumber} departed for highway.`
       );
       onCompleted();
       onClose();

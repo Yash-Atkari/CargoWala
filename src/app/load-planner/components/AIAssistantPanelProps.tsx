@@ -97,17 +97,17 @@ export default function AIAssistantPanel({
   const [activeTab, setActiveTab] = useState<'recommendations' | 'route' | 'steps' | 'constraints'>('route');
 
   const strategyLabels: Record<OptimizationStrategy, string> = {
-    BALANCED: 'Balanced Logistics & Safety',
-    SPACE_MAX: 'Maximum Space Density',
-    FRAGILITY_FIRST: 'Zero Fragility Damage',
-    LIFO_PRIORITY: 'Strict LIFO Delivery Sequence',
+    BALANCED: 'Unified 4-Constraint (Balanced Safety & Route)',
+    SPACE_MAX: 'Unified 4-Constraint (Space Density Bias)',
+    FRAGILITY_FIRST: 'Unified 4-Constraint (Zero Crush Bias)',
+    LIFO_PRIORITY: 'Unified 4-Constraint (LIFO Unload Bias)',
   };
 
   return (
     <div className="flex flex-col h-full bg-card">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border bg-muted/20">
-        <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0 shadow-sm shadow-primary/20">
               <Zap size={14} className="text-white" />
@@ -122,56 +122,48 @@ export default function AIAssistantPanel({
             </div>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-          <Sparkles size={11} className="text-primary flex-shrink-0" />
-          Active Policy: <span className="text-foreground font-semibold">{strategyLabels[strategy]}</span>
-        </p>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-border bg-muted/30 p-1 gap-1">
         <button
           onClick={() => setActiveTab('route')}
-          className={`flex-1 py-1.5 px-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+          className={`flex-1 py-1.5 px-1 rounded-md text-xs font-bold transition-all text-center ${
             activeTab === 'route'
               ? 'bg-card text-primary shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Route size={12} />
           Route ({unloadingReport?.stops.length || 0})
         </button>
         <button
           onClick={() => setActiveTab('recommendations')}
-          className={`flex-1 py-1.5 px-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+          className={`flex-1 py-1.5 px-1 rounded-md text-xs font-bold transition-all text-center ${
             activeTab === 'recommendations'
               ? 'bg-card text-primary shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Lightbulb size={12} />
           AI Tips ({recommendations.length})
         </button>
         <button
           onClick={() => setActiveTab('steps')}
-          className={`flex-1 py-1.5 px-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+          className={`flex-1 py-1.5 px-1 rounded-md text-xs font-bold transition-all text-center ${
             activeTab === 'steps'
               ? 'bg-card text-primary shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <ListOrdered size={12} />
           Steps ({steps.length})
         </button>
         <button
           onClick={() => setActiveTab('constraints')}
-          className={`flex-1 py-1.5 px-1.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+          className={`flex-1 py-1.5 px-1 rounded-md text-xs font-bold transition-all text-center ${
             activeTab === 'constraints'
               ? 'bg-card text-primary shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Scale size={12} />
           Checks
         </button>
       </div>

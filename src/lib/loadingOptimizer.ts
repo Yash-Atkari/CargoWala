@@ -1134,46 +1134,67 @@ export function findBestPosition(
       const { valid } = checkCollision(pos, pkg, placed, truck);
       if (!valid) continue;
 
-      let score = 0;
-      const centerDistZ = Math.abs(pos.z + dims.w / 2 - truck.width / 2);
+      // ─── UNIFIED 4-CONSTRAINT SCORING ENGINE ─────────────────────────────
+      // Enforces LIFO Sequence, Fragility/Zero Crush, Vehicle Stability, & Space Maximization simultaneously
 
+      // 1. LIFO Sequence & Route Unloading Accessibility Cost
+      let lifoCost = Math.abs(pos.x - idealTargetX) * 3.5;
       for (const p of placed) {
         const otherStop = p.package.deliverySequence || 1;
+        // If current package is for an EARLIER stop (lower stopSeq), placing it deeper in cab (smaller X) than a later stop item blocks it
+        if (stopSeq < otherStop && pos.x < p.position.x) {
+          lifoCost += (p.position.x - pos.x) * 6.0;
+        }
+        // If current package is for a LATER stop (higher stopSeq), placing it near rear door (larger X) in front of an earlier stop item blocks it
         if (stopSeq > otherStop && pos.x > p.position.x) {
-          score += (pos.x - p.position.x) * 3.0;
+          lifoCost += (pos.x - p.position.x) * 6.0;
         }
       }
 
+      // 2. Fragility & Multi-Factor Damage Risk Cost
+      let fragilityCost = 0;
+      const damageEval = calculateDetailedDamageRisk(pkg, pos, placed, truck);
+      if (damageEval.riskScore >= 75) {
+        // Hard safety rejection if candidate position causes CRITICAL crushing/damage risk
+        continue;
+      }
+      fragilityCost += damageEval.riskScore * 5.0;
+      if (isHeavy) {
+        // Heavy cargo must be anchored to floor level (Y=0)
+        fragilityCost += pos.y * 30.0;
+      } else if (isFragile) {
+        // Fragile items kept away from top tier vibration and protected
+        fragilityCost += pos.y * 5.0;
+      }
+
+      // 3. Vehicle Stability & Weight Distribution Cost
+      let stabilityCost = 0;
+      const centerDistZ = Math.abs(pos.z + dims.w / 2 - truck.width / 2);
+      stabilityCost += centerDistZ * 4.0; // Lateral Center of Gravity balance along truck centerline
+      stabilityCost += pos.y * 2.5;       // Low vertical Center of Gravity for Static Rollover Threshold (SRT) safety
+
+      // 4. Space Maximization & Bin Density Cost
+      let spaceCost = pos.y * 3.0 + pos.x * 1.0;
+
+      // Strategy bias weightings (all 4 constraints remain active in all policies)
+      let wLIFO = 1.0, wFrag = 1.0, wStab = 1.0, wSpace = 1.0;
       switch (strategy) {
         case 'LIFO_PRIORITY':
-          score += Math.abs(pos.x - idealTargetX) * 5.0;
-          score += pos.y * (isHeavy ? 15.0 : 3.0);
-          score += centerDistZ * 1.5;
+          wLIFO = 1.6;
           break;
-
-        case 'SPACE_MAX':
-          score += pos.y * 5.0;
-          score += pos.x * 1.5;
-          score += centerDistZ * 0.8;
-          break;
-
         case 'FRAGILITY_FIRST':
-          if (isFragile) {
-            score += Math.abs(pos.y - truck.height * 0.45) * 3.0;
-            score += Math.abs(pos.x - truck.length * 0.5) * 2.0;
-          } else if (isHeavy) {
-            score += pos.y * 30.0;
-          }
-          score += centerDistZ * 1.0;
+          wFrag = 1.6;
           break;
-
+        case 'SPACE_MAX':
+          wSpace = 1.6;
+          break;
         case 'BALANCED':
         default:
-          score += isHeavy ? pos.y * 20.0 : pos.y * 3.0;
-          score += Math.abs(pos.x - idealTargetX) * 2.5;
-          score += centerDistZ * 1.2;
+          wStab = 1.2;
           break;
       }
+
+      const score = lifoCost * wLIFO + fragilityCost * wFrag + stabilityCost * wStab + spaceCost * wSpace;
 
       if (score < bestScore) {
         bestScore = score;

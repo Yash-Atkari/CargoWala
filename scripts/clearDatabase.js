@@ -34,20 +34,24 @@ async function clearDatabase() {
 
   // 1. Reset all trucks to free/available state first
   console.log('Resetting trucks to AVAILABLE state with 0% utilization...');
-  const { error: truckResetErr } = await supabase
-    .from('trucks')
-    .update({
-      status: 'AVAILABLE',
-      current_shipment_id: null,
-      current_utilization: 0,
-      weight_utilization: 0,
-      assigned_loader_id: null,
-      assigned_loader_name: null,
-    })
-    .neq('id', 'placeholder');
-
-  if (truckResetErr) {
-    console.error('Error resetting trucks:', truckResetErr);
+  const { data: allTrucks } = await supabase.from('trucks').select('id');
+  if (allTrucks && allTrucks.length > 0) {
+    for (const t of allTrucks) {
+      const { error: truckResetErr } = await supabase
+        .from('trucks')
+        .update({
+          status: 'AVAILABLE',
+          current_shipment_id: null,
+          current_utilization: 0,
+          weight_utilization: 0,
+          assigned_loader_id: null,
+          assigned_loader_name: null,
+        })
+        .eq('id', t.id);
+      if (truckResetErr) {
+        console.error(`Error resetting truck ${t.id}:`, truckResetErr);
+      }
+    }
   }
 
   // 2. Delete all tracking events
